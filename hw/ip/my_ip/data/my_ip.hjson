@@ -1,71 +1,61 @@
-// Copyright EPFL and Politecnico di Torino contributors.
-// Licensed under the Apache License, Version 2.0, see LICENSE for details.
-// SPDX-License-Identifier: Apache-2.0
-
 { name: "my_ip"
   clock_primary: "clk_i"
   bus_interfaces: [
     { protocol: "reg_iface", direction: "device" }
   ]
   regwidth: "32"
+
   registers: [
-    { name:     "CONTROL"
-      desc:     "Control register for flash controller"
+    { name: "CONTROL"
+      desc: "Control register for flash controller"
       swaccess: "rw"
       hwaccess: "hrw"
       fields: [
-        { bits: "1", 
-          name: "RNW", 
-          desc: "read not write",
-          resval: "0x0"
-        }
-        { bits: "0", 
-          name: "START", 
-          desc: "Start action",
-          resval: "0x0"
-        }
+        { bits: "1", name: "RNW", desc: "read not write", resval: "0x0" }
+        { bits: "0", name: "START", desc: "Start action", resval: "0x0" }
       ]
     }
-    { name:     "STATUS"
-      desc:     "Status register for flash controller"
+
+    { name: "STATUS"
+      desc: "Status register for flash controller"
       swaccess: "rw"
       hwaccess: "hrw"
       fields: [
-        { bits: "0", 
-          name: "READY", 
-          desc: "Ready for new read/write",
-          resval: "0x0"
-        }
+        { bits: "0", name: "READY", desc: "Ready for new read/write", resval: "0x0" }
       ]
     }
-    { name:     "R_ADDRESS"
-      desc:     "Address in Flash to read from"
+
+    { name: "R_ADDRESS"
+      desc: "Address in Flash to read from"
       swaccess: "rw"
       hwaccess: "hrw"
       fields: [
-        { bits: "31:0", name: "R_ADDRESS", desc: "Address to read from" },
+        { bits: "31:0", name: "R_ADDRESS", desc: "Address to read from" }
       ]
     }
-    { name:     "S_ADDRESS"
-      desc:     "Address to store read data from SPI_FLASH"
+
+    { name: "S_ADDRESS"
+      desc: "Address to store read data from SPI_FLASH"
       swaccess: "rw"
       hwaccess: "hrw"
       fields: [
-        { bits: "31:0", name: "S_ADDRESS", desc: "Address to store read data from SPI_FLASH" },
+        { bits: "31:0", name: "S_ADDRESS", desc: "Address to store read data from SPI_FLASH" }
       ]
     }
-    { name:     "LENGTH"
-      desc:     "Length of data to W/R"
+
+    { name: "LENGTH"
+      desc: "Length of data to W/R"
       swaccess: "rw"
       hwaccess: "hrw"
       fields: [
-        { bits: "31:0", name: "LENGTH", desc: "Length of data to W/R" },
+        { bits: "31:0", name: "LENGTH", desc: "Length of data to W/R" }
       ]
     }
   ]
+
   interrupt_list: [
     { name: "my_ip_event"
-      desc: '''Event-related interrupts.'''
+      desc: "Event-related interrupts."
     }
   ]
 }

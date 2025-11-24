@@ -189,7 +189,7 @@ uint32_t test_write_flash_only(uint32_t *test_buffer, uint32_t len) {
     uint32_t *test_buffer_flash = heep_get_flash_address_offset(flash_only_write_buffer);
 
     // Write to flash memory at specific address
-    global_status = w25q128jw_erase_and_write_standard(test_buffer_flash, test_buffer, len);
+    global_status = w25q128jw_erase_and_write_standard_dma(test_buffer_flash, test_buffer, len);
     if (global_status != FLASH_OK) exit(EXIT_FAILURE);
 
     // Read from flash memory at the same address

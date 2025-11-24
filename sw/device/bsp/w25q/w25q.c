@@ -1498,7 +1498,7 @@ static void flash_wait(void) {
         spi_wait_for_ready(spi);
         spi_set_command(spi, spi_status_read_cmd);
         spi_wait_for_ready(spi);
-        spi_wait_for_rx_watermark(spi); // Reason why we have SIM flag
+        spi_wait_for_rx_watermark(spi); 
         spi_read_word(spi, (uint32_t *)flash_resp);
         if ((flash_resp[0] & 0x01) == 0) flash_busy = false; // Reason why we have SIM flag (either very long or does not work in simulation)
     }

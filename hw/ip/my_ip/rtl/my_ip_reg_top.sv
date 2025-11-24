@@ -79,9 +79,12 @@ module my_ip_reg_top #(
   logic control_start_qs;
   logic control_start_wd;
   logic control_start_we;
-  logic control_ready_qs;
-  logic control_ready_wd;
-  logic control_ready_we;
+  logic control_rnw_qs;
+  logic control_rnw_wd;
+  logic control_rnw_we;
+  logic status_qs;
+  logic status_wd;
+  logic status_we;
   logic [31:0] r_address_qs;
   logic [31:0] r_address_wd;
   logic r_address_we;
@@ -191,29 +194,56 @@ module my_ip_reg_top #(
   );
 
 
-  //   F[ready]: 1:1
+  //   F[rnw]: 1:1
   prim_subreg #(
       .DW      (1),
       .SWACCESS("RW"),
       .RESVAL  (1'h0)
-  ) u_control_ready (
+  ) u_control_rnw (
       .clk_i (clk_i),
       .rst_ni(rst_ni),
 
       // from register interface
-      .we(control_ready_we),
-      .wd(control_ready_wd),
+      .we(control_rnw_we),
+      .wd(control_rnw_wd),
 
       // from internal hardware
-      .de(hw2reg.control.ready.de),
-      .d (hw2reg.control.ready.d),
+      .de(hw2reg.control.rnw.de),
+      .d (hw2reg.control.rnw.d),
 
       // to internal hardware
       .qe(),
-      .q (reg2hw.control.ready.q),
+      .q (reg2hw.control.rnw.q),
 
       // to register interface (read)
-      .qs(control_ready_qs)
+      .qs(control_rnw_qs)
+  );
+
+
+  // R[status]: V(False)
+
+  prim_subreg #(
+      .DW      (1),
+      .SWACCESS("RW"),
+      .RESVAL  (1'h0)
+  ) u_status (
+      .clk_i (clk_i),
+      .rst_ni(rst_ni),
+
+      // from register interface
+      .we(status_we),
+      .wd(status_wd),
+
+      // from internal hardware
+      .de(hw2reg.status.de),
+      .d (hw2reg.status.d),
+
+      // to internal hardware
+      .qe(),
+      .q (reg2hw.status.q),
+
+      // to register interface (read)
+      .qs(status_qs)
   );
 
 
@@ -300,16 +330,17 @@ module my_ip_reg_top #(
 
 
 
-  logic [6:0] addr_hit;
+  logic [7:0] addr_hit;
   always_comb begin
     addr_hit = '0;
     addr_hit[0] = (reg_addr == MY_IP_INTR_STATE_OFFSET);
     addr_hit[1] = (reg_addr == MY_IP_INTR_ENABLE_OFFSET);
     addr_hit[2] = (reg_addr == MY_IP_INTR_TEST_OFFSET);
     addr_hit[3] = (reg_addr == MY_IP_CONTROL_OFFSET);
-    addr_hit[4] = (reg_addr == MY_IP_R_ADDRESS_OFFSET);
-    addr_hit[5] = (reg_addr == MY_IP_S_ADDRESS_OFFSET);
-    addr_hit[6] = (reg_addr == MY_IP_LENGTH_OFFSET);
+    addr_hit[4] = (reg_addr == MY_IP_STATUS_OFFSET);
+    addr_hit[5] = (reg_addr == MY_IP_R_ADDRESS_OFFSET);
+    addr_hit[6] = (reg_addr == MY_IP_S_ADDRESS_OFFSET);
+    addr_hit[7] = (reg_addr == MY_IP_LENGTH_OFFSET);
   end
 
   assign addrmiss = (reg_re || reg_we) ? ~|addr_hit : 1'b0;
@@ -323,7 +354,8 @@ module my_ip_reg_top #(
                (addr_hit[3] & (|(MY_IP_PERMIT[3] & ~reg_be))) |
                (addr_hit[4] & (|(MY_IP_PERMIT[4] & ~reg_be))) |
                (addr_hit[5] & (|(MY_IP_PERMIT[5] & ~reg_be))) |
-               (addr_hit[6] & (|(MY_IP_PERMIT[6] & ~reg_be)))));
+               (addr_hit[6] & (|(MY_IP_PERMIT[6] & ~reg_be))) |
+               (addr_hit[7] & (|(MY_IP_PERMIT[7] & ~reg_be)))));
   end
 
   assign intr_state_we = addr_hit[0] & reg_we & !reg_error;
@@ -338,16 +370,19 @@ module my_ip_reg_top #(
   assign control_start_we = addr_hit[3] & reg_we & !reg_error;
   assign control_start_wd = reg_wdata[0];
 
-  assign control_ready_we = addr_hit[3] & reg_we & !reg_error;
-  assign control_ready_wd = reg_wdata[1];
+  assign control_rnw_we = addr_hit[3] & reg_we & !reg_error;
+  assign control_rnw_wd = reg_wdata[1];
 
-  assign r_address_we = addr_hit[4] & reg_we & !reg_error;
+  assign status_we = addr_hit[4] & reg_we & !reg_error;
+  assign status_wd = reg_wdata[0];
+
+  assign r_address_we = addr_hit[5] & reg_we & !reg_error;
   assign r_address_wd = reg_wdata[31:0];
 
-  assign s_address_we = addr_hit[5] & reg_we & !reg_error;
+  assign s_address_we = addr_hit[6] & reg_we & !reg_error;
   assign s_address_wd = reg_wdata[31:0];
 
-  assign length_we = addr_hit[6] & reg_we & !reg_error;
+  assign length_we = addr_hit[7] & reg_we & !reg_error;
   assign length_wd = reg_wdata[31:0];
 
   // Read data return
@@ -368,18 +403,22 @@ module my_ip_reg_top #(
 
       addr_hit[3]: begin
         reg_rdata_next[0] = control_start_qs;
-        reg_rdata_next[1] = control_ready_qs;
+        reg_rdata_next[1] = control_rnw_qs;
       end
 
       addr_hit[4]: begin
-        reg_rdata_next[31:0] = r_address_qs;
+        reg_rdata_next[0] = status_qs;
       end
 
       addr_hit[5]: begin
-        reg_rdata_next[31:0] = s_address_qs;
+        reg_rdata_next[31:0] = r_address_qs;
       end
 
       addr_hit[6]: begin
+        reg_rdata_next[31:0] = s_address_qs;
+      end
+
+      addr_hit[7]: begin
         reg_rdata_next[31:0] = length_qs;
       end
 
