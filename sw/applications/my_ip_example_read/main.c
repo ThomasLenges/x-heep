@@ -162,6 +162,3 @@ uint32_t check_result(uint8_t *test_buffer, uint32_t len) {
 
     return errors;
 }
-
-
-// Verify SPI read values write them down then run spi_read_example and check SPI values (also DMA after if still not the solution)

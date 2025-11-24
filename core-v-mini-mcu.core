@@ -227,6 +227,11 @@ parameters:
     paramtype: vlogdefine
     description: |
       Remove the FIFO between the BUS and the peripherals subsystems
+  PASS_FWAIT:
+    datatype: bool
+    paramtype: vlogdefine
+    description: |
+      Remove the flash wait states for simulation
   SYNTHESIS:
     datatype: bool
     paramtype: vlogdefine
@@ -340,6 +345,7 @@ targets:
     - USE_EXTERNAL_DEVICE_EXAMPLE
     - USE_UPF
     - REMOVE_OBI_FIFO
+    - PASS_FWAIT
     tools:
       modelsim:
         vlog_options:
