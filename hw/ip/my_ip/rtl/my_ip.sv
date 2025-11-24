@@ -110,7 +110,7 @@ module my_ip #(
   } top_state_e;
 
   // READ FSM
-  typedef enum logic [3:0]{
+  typedef enum logic [3:0] {
     READ_IDLE,
     READ_DMA_SRC_PTR,
     READ_DMA_DST_PTR,
@@ -131,7 +131,7 @@ module my_ip #(
   } read_state_e;
 
   // FLASH WAIT FSM
-  typedef enum logic [3:0]{
+  typedef enum logic [3:0] {
     FWAIT_IDLE,
     FWAIT_SET_RXWM_R,
     FWAIT_SET_RXWM_W,
@@ -146,7 +146,7 @@ module my_ip #(
   } fwait_state_e;
 
   // ERASE FSM
-  typedef enum logic [3:0]{
+  typedef enum logic [3:0] {
     ERASE_IDLE,
     ERASE_WE_CHECK_TX_FIFO,
     ERASE_WE_FILL_TX_FIFO,
@@ -176,36 +176,44 @@ module my_ip #(
     WRITE_DMA_DST_TYPE,
     WRITE_DMA_TRIG,
     WRITE_DMA_SIZE_D1,
-    
+
     WRITE_TRANS,
     WRITE_PP_WAIT_READY_2,
     WRITE_PP_SEND_CMD_2
 
   } write_state_e;
 
-  top_state_e        top_state_q,        top_state_d;
-  read_state_e       read_state_q,       read_state_d;
-  erase_state_e      erase_state_q,      erase_state_d;
-  fwait_state_e      fwait_state_q,      fwait_state_d;
-  write_state_e      write_state_q,      write_state_d;
+  top_state_e top_state_q, top_state_d;
+  read_state_e read_state_q, read_state_d;
+  erase_state_e erase_state_q, erase_state_d;
+  fwait_state_e fwait_state_q, fwait_state_d;
+  write_state_e write_state_q, write_state_d;
   logic [1:0] fwait_cnt_q, fwait_cnt_d;
+
+  logic pass_fwait;
+
+`ifdef PASS_FWAIT
+  assign pass_fwait = 1'b1;
+`else
+  assign pass_fwait = 1'b0;
+`endif
 
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
-      top_state_q <= TOP_IDLE;
-      read_state_q <= READ_IDLE;
+      top_state_q   <= TOP_IDLE;
+      read_state_q  <= READ_IDLE;
       erase_state_q <= ERASE_IDLE;
       fwait_state_q <= FWAIT_IDLE;
       write_state_q <= WRITE_IDLE;
-      fwait_cnt_q <= 2'b0;
+      fwait_cnt_q   <= 2'b0;
     end else begin
-      top_state_q <= top_state_d;
-      read_state_q <= read_state_d;
+      top_state_q   <= top_state_d;
+      read_state_q  <= read_state_d;
       erase_state_q <= erase_state_d;
       fwait_state_q <= fwait_state_d;
       write_state_q <= write_state_d;
-      fwait_cnt_q <= fwait_cnt_d;
+      fwait_cnt_q   <= fwait_cnt_d;
     end
   end
 
@@ -234,8 +242,8 @@ module my_ip #(
           address   = DMA_START_ADDRESS + {25'b0, DMA_STATUS_OFFSET};
           obi_start = 1'b1;
 
-          if (obi_finish && read_value[0]) begin // DMA ready
-            top_state_d = TOP_READ;
+          if (obi_finish && read_value[0]) begin  // DMA ready
+            top_state_d  = TOP_READ;
             read_state_d = READ_DMA_SRC_PTR;
           end
         end
@@ -317,7 +325,9 @@ module my_ip #(
 
           READ_DMA_TRIG: begin
             address = DMA_START_ADDRESS + {25'b0, DMA_SLOT_OFFSET};
-            data = {16'h0, 16'h4};  // TX_TRG: Memory write trigger + RX_TRG: SPI Host RX FIFO threshold
+            data = {
+              16'h0, 16'h4
+            };  // TX_TRG: Memory write trigger + RX_TRG: SPI Host RX FIFO threshold
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -394,7 +404,9 @@ module my_ip #(
 
           READ_SPI_SEND_CMD_2: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_COMMAND_OFFSET};
-            data = {3'h0, 2'h1, 2'h0, 1'h0, reg2hw.length[23:0] - 1'h1};  // Empty + Direction + Speed + Csaat + Length
+            data = {
+              3'h0, 2'h1, 2'h0, 1'h0, reg2hw.length[23:0] - 1'h1
+            };  // Empty + Direction + Speed + Csaat + Length
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -406,15 +418,15 @@ module my_ip #(
           READ_TRANS: begin
             if (dma_done[0]) begin  // Transaction done
               if (reg2hw.control.rnw) begin
-                read_state_d              = READ_IDLE;
-                top_state_d               = TOP_IDLE;
-                my_ip_done_o              = 1'b1;
-                hw2reg.control.start.de   = 1'b1;
-                hw2reg.control.start.d    = 1'b0;
+                read_state_d            = READ_IDLE;
+                top_state_d             = TOP_IDLE;
+                my_ip_done_o            = 1'b1;
+                hw2reg.control.start.de = 1'b1;
+                hw2reg.control.start.d  = 1'b0;
               end else begin
-                read_state_d              = READ_IDLE;
-                top_state_d               = TOP_FWAIT;
-                fwait_state_d             = FWAIT_SET_RXWM_R; 
+                read_state_d  = READ_IDLE;
+                top_state_d   = TOP_FWAIT;
+                fwait_state_d = FWAIT_SET_RXWM_R;
               end
             end
           end
@@ -434,51 +446,48 @@ module my_ip #(
             // Nothing to do here.
           end
 
-        `ifdef PASS_FWAIT
           FWAIT_SET_RXWM_R: begin
-            case (fwait_cnt_q)
-              2'h0: begin // Enter erase
-                fwait_cnt_d   = fwait_cnt_q + 1'h1;
-                fwait_state_d = FWAIT_IDLE;
-                top_state_d   = TOP_ERASE;
-                erase_state_d = ERASE_WE_CHECK_TX_FIFO;
-              end
+            if (pass_fwait) begin
+              case (fwait_cnt_q)
+                2'h0: begin  // Enter erase
+                  fwait_cnt_d   = fwait_cnt_q + 1'h1;
+                  fwait_state_d = FWAIT_IDLE;
+                  top_state_d   = TOP_ERASE;
+                  erase_state_d = ERASE_WE_CHECK_TX_FIFO;
+                end
 
-              2'h1: begin // Enter write
-                fwait_cnt_d   = fwait_cnt_q + 1'h1;
-                fwait_state_d = FWAIT_IDLE;
-                top_state_d   = TOP_WRITE;
-                write_state_d = WRITE_PP_CHECK_TX_FIFO;
-              end
+                2'h1: begin  // Enter write
+                  fwait_cnt_d   = fwait_cnt_q + 1'h1;
+                  fwait_state_d = FWAIT_IDLE;
+                  top_state_d   = TOP_WRITE;
+                  write_state_d = WRITE_PP_CHECK_TX_FIFO;
+                end
 
-              2'h2: begin // Exit write
-                fwait_cnt_d   = 2'h0;
-                fwait_state_d = FWAIT_IDLE;
-                top_state_d   = TOP_IDLE;
-                my_ip_done_o  = 1'b1;
-                hw2reg.control.start.de = 1'b1;
-                hw2reg.control.start.d  = 1'b0;
-              end
+                2'h2: begin  // Exit write
+                  fwait_cnt_d = 2'h0;
+                  fwait_state_d = FWAIT_IDLE;
+                  top_state_d = TOP_IDLE;
+                  my_ip_done_o = 1'b1;
+                  hw2reg.control.start.de = 1'b1;
+                  hw2reg.control.start.d = 1'b0;
+                end
 
-              default: begin
-              end
-            endcase
-          end 
-        `else
-          // Wait for flash to be ready
-          FWAIT_SET_RXWM_R: begin
-            address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_CONTROL_OFFSET};
-            obi_start = 1'b1;
+                default: begin
+                end
+              endcase
+            end else begin
+              address   = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_CONTROL_OFFSET};
+              obi_start = 1'b1;
 
-            if (obi_finish) begin
-              fwait_state_d = FWAIT_SET_RXWM_W;
+              if (obi_finish) begin
+                fwait_state_d = FWAIT_SET_RXWM_W;
+              end
             end
           end
-        `endif
 
           FWAIT_SET_RXWM_W: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_CONTROL_OFFSET};
-            data    = {read_value[31:8], 8'h01}; 
+            data    = {read_value[31:8], 8'h01};
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -498,7 +507,7 @@ module my_ip #(
 
           FWAIT_SPI_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = 32'h00000005; // Read Flash Status Register 1
+            data = 32'h00000005;  // Read Flash Status Register 1
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -564,34 +573,34 @@ module my_ip #(
               if (read_value[0] == 1'b0) begin
                 case (fwait_cnt_q)
 
-                  2'h0: begin // Enter erase
+                  2'h0: begin  // Enter erase
                     fwait_cnt_d   = fwait_cnt_q + 1'h1;
                     fwait_state_d = FWAIT_IDLE;
                     top_state_d   = TOP_ERASE;
                     erase_state_d = ERASE_WE_CHECK_TX_FIFO;
                   end
 
-                  2'h1: begin // Enter write
+                  2'h1: begin  // Enter write
                     fwait_cnt_d   = fwait_cnt_q + 1'h1;
                     fwait_state_d = FWAIT_IDLE;
                     top_state_d   = TOP_WRITE;
                     write_state_d = WRITE_PP_CHECK_TX_FIFO;
                   end
 
-                  2'h2: begin // Exit write
-                    fwait_cnt_d   = 2'h0;
+                  2'h2: begin  // Exit write
+                    fwait_cnt_d = 2'h0;
                     fwait_state_d = FWAIT_IDLE;
-                    top_state_d   = TOP_IDLE;
-                    my_ip_done_o  = 1'b1;
+                    top_state_d = TOP_IDLE;
+                    my_ip_done_o = 1'b1;
                     hw2reg.control.start.de = 1'b1;
-                    hw2reg.control.start.d  = 1'b0;
+                    hw2reg.control.start.d = 1'b0;
                   end
 
                   default: begin
                   end
                 endcase
               end else begin
-                fwait_state_d = FWAIT_SET_RXWM_R; // Loop again for flash wait
+                fwait_state_d = FWAIT_SET_RXWM_R;  // Loop again for flash wait
               end
             end
           end
@@ -624,7 +633,7 @@ module my_ip #(
 
           ERASE_WE_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = 32'h00000006; // Write Enable command
+            data = 32'h00000006;  // Write Enable command
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -638,7 +647,7 @@ module my_ip #(
             obi_start = 1'b1;
 
             if (obi_finish && read_value[31]) begin
-                erase_state_d = ERASE_WE_SEND_CMD;
+              erase_state_d = ERASE_WE_SEND_CMD;
             end
           end
 
@@ -664,7 +673,8 @@ module my_ip #(
 
           ERASE_SE_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) | 32'h20; // May need to change address!
+            data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) |
+                32'h20;  // May need to change address!
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -677,7 +687,7 @@ module my_ip #(
             address   = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_STATUS_OFFSET};
             obi_start = 1'b1;
 
-            if (obi_finish &&read_value[31] == 1'b1) begin
+            if (obi_finish && read_value[31] == 1'b1) begin
               erase_state_d = ERASE_SE_SEND_CMD;
             end
           end
@@ -689,9 +699,9 @@ module my_ip #(
             obi_start = 1'b1;
 
             if (obi_finish) begin
-              erase_state_d              = ERASE_IDLE;
-              top_state_d               = TOP_FWAIT;
-              fwait_state_d             = FWAIT_SET_RXWM_R; 
+              erase_state_d = ERASE_IDLE;
+              top_state_d   = TOP_FWAIT;
+              fwait_state_d = FWAIT_SET_RXWM_R;
             end
           end
 
@@ -720,7 +730,8 @@ module my_ip #(
 
           WRITE_PP_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) | 32'h02; // May need to change address!
+            data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) |
+                32'h02;  // May need to change address!
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -733,7 +744,7 @@ module my_ip #(
             address   = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_STATUS_OFFSET};
             obi_start = 1'b1;
 
-            if (obi_finish &&read_value[31] == 1'b1) begin
+            if (obi_finish && read_value[31] == 1'b1) begin
               write_state_d = WRITE_PP_WAIT_READY;
             end
           end
@@ -753,8 +764,8 @@ module my_ip #(
             address   = DMA_START_ADDRESS + {25'b0, DMA_STATUS_OFFSET};
             obi_start = 1'b1;
 
-            if (obi_finish && read_value[0]) begin // DMA ready
-                write_state_d = WRITE_DMA_SRC_PTR;
+            if (obi_finish && read_value[0]) begin  // DMA ready
+              write_state_d = WRITE_DMA_SRC_PTR;
             end
           end
 
@@ -854,7 +865,7 @@ module my_ip #(
 
           WRITE_TRANS: begin
             if (dma_done[0]) begin  // Transaction done
-              write_state_d             = WRITE_IDLE;
+              write_state_d = WRITE_IDLE;
             end
           end
 
@@ -862,21 +873,23 @@ module my_ip #(
             address   = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_STATUS_OFFSET};
             obi_start = 1'b1;
 
-            if (obi_finish &&read_value[31] == 1'b1) begin
+            if (obi_finish && read_value[31] == 1'b1) begin
               write_state_d = WRITE_PP_WAIT_READY;
             end
           end
 
           WRITE_PP_SEND_CMD_2: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_COMMAND_OFFSET};
-            data = {3'h0, 2'h2, 2'h0, 1'h0, reg2hw.length[23:0] - 1'h1};  // Empty + Direction + Speed + Csaat + Length
+            data = {
+              3'h0, 2'h2, 2'h0, 1'h0, reg2hw.length[23:0] - 1'h1
+            };  // Empty + Direction + Speed + Csaat + Length
             w_enable = 1'b1;
             obi_start = 1'b1;
 
             if (obi_finish) begin
-              write_state_d             = WRITE_IDLE;
-              top_state_d               = TOP_FWAIT;
-              fwait_state_d             = FWAIT_SET_RXWM_R; 
+              write_state_d = WRITE_IDLE;
+              top_state_d   = TOP_FWAIT;
+              fwait_state_d = FWAIT_SET_RXWM_R;
             end
           end
 
@@ -894,8 +907,8 @@ module my_ip #(
 
   // Assignments
   assign my_ip_interrupt_o = 1'b0;
-  assign hw2reg.status.d = (top_state_q == TOP_IDLE);
-  assign hw2reg.status.de = 1'b1;
+  assign hw2reg.status.d   = (top_state_q == TOP_IDLE);
+  assign hw2reg.status.de  = 1'b1;
 
   // Registers 
   my_ip_reg_top #(
