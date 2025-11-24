@@ -434,7 +434,7 @@ module my_ip #(
             // Nothing to do here.
           end
 
-        `ifdef TARGET_SIM
+        `ifdef PASS_FWAIT
           FWAIT_SET_RXWM_R: begin
             case (fwait_cnt_q)
               2'h0: begin // Enter erase
@@ -903,7 +903,7 @@ module my_ip #(
       .reg_rsp_t(reg_rsp_t)
   ) my_ip_reg_top_i (
       .clk_i(clk_i),
-      .rst_ni(rst_ni)
+      .rst_ni(rst_ni),
       .reg_req_i,
       .reg_rsp_o,
       .reg2hw,
