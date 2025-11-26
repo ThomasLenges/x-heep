@@ -121,6 +121,13 @@ __attribute__((optimize("O0"))) void my_ip_run(){
                     0,
                     MY_IP_START_ADDRESS
                 );
+    // Specify it is a read operation
+    write_register( 0x1,
+                    MY_IP_CONTROL_REG_OFFSET,
+                    0x1,
+                    MY_IP_CONTROL_RNW_BIT,
+                    MY_IP_START_ADDRESS
+                );
     // Start read operation
     write_register( 0x1,
                     MY_IP_CONTROL_REG_OFFSET,

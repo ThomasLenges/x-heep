@@ -232,6 +232,7 @@ parameters:
     paramtype: vlogdefine
     description: |
       Remove the flash wait states for simulation
+    default: true
   SYNTHESIS:
     datatype: bool
     paramtype: vlogdefine
