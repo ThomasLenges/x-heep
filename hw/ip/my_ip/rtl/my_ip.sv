@@ -865,7 +865,7 @@ module my_ip #(
 
           WRITE_TRANS: begin
             if (dma_done[0]) begin  // Transaction done
-              write_state_d = WRITE_IDLE;
+              write_state_d = WRITE_PP_WAIT_READY_2;
             end
           end
 
@@ -874,7 +874,7 @@ module my_ip #(
             obi_start = 1'b1;
 
             if (obi_finish && read_value[31] == 1'b1) begin
-              write_state_d = WRITE_PP_WAIT_READY;
+              write_state_d = WRITE_PP_SEND_CMD_2;
             end
           end
 
