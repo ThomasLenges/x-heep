@@ -745,7 +745,7 @@ module my_ip #(
             obi_start = 1'b1;
 
             if (obi_finish && read_value[31] == 1'b1) begin
-              write_state_d = WRITE_PP_WAIT_READY;
+              write_state_d = WRITE_PP_SEND_CMD;
             end
           end
 
