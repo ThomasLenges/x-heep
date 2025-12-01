@@ -30,6 +30,14 @@ module my_ip #(
   my_ip_reg2hw_t reg2hw;
   my_ip_hw2reg_t hw2reg;
 
+// FLASH COMMANDS
+  localparam logic [31:0]
+    FC_RD   = 32'h03, // Read Data
+    FC_RSR1 = 32'h05, // Read Status Register 1
+    FC_WE   = 32'h06, // Write Enable
+    FC_SE   = 32'h20, // Sector Erase 4KB
+    FC_PP   = 32'h02; // Page Program
+
   // OBI FSM
   enum logic [1:0] {
     OBI_IDLE,
@@ -364,7 +372,7 @@ module my_ip #(
 
           READ_SPI_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) | 32'h03;
+            data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) | FC_RD;
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -507,7 +515,7 @@ module my_ip #(
 
           FWAIT_SPI_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = 32'h00000005;  // Read Flash Status Register 1
+            data = FC_RSR1;  // Read Flash Status Register 1
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -633,7 +641,7 @@ module my_ip #(
 
           ERASE_WE_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = 32'h00000006;  // Write Enable command
+            data = FC_WE;  // Write Enable command
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -674,7 +682,7 @@ module my_ip #(
           ERASE_SE_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
             data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) |
-                32'h20;  // May need to change address!
+                FC_SE;  // May need to change address!
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -731,7 +739,7 @@ module my_ip #(
           WRITE_PP_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
             data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) |
-                32'h02;  // May need to change address!
+                FC_PP;  // May need to change address!
             w_enable = 1'b1;
             obi_start = 1'b1;
 

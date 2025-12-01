@@ -140,7 +140,6 @@ __attribute__((optimize("O0"))) void my_ip_run(){
 
 int main(void) {
 
-    
     my_ip_run();
 
     // Wait for DMA transfer to complete
@@ -169,6 +168,8 @@ uint32_t check_result(uint8_t *test_buffer, uint32_t len) {
 
     return errors;
 }
+
+// QuestaSim duration (in ns): 6'500'000
 
 // #include <stdio.h>
 // #include <stdint.h>
