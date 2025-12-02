@@ -30,13 +30,12 @@ module my_ip #(
   my_ip_reg2hw_t reg2hw;
   my_ip_hw2reg_t hw2reg;
 
-// FLASH COMMANDS
-  localparam logic [31:0]
-    FC_RD   = 32'h03, // Read Data
-    FC_RSR1 = 32'h05, // Read Status Register 1
-    FC_WE   = 32'h06, // Write Enable
-    FC_SE   = 32'h20, // Sector Erase 4KB
-    FC_PP   = 32'h02; // Page Program
+  // FLASH COMMANDS
+  localparam logic [31:0] FC_RD = 32'h03,  // Read Data
+  FC_RSR1 = 32'h05,  // Read Status Register 1
+  FC_WE = 32'h06,  // Write Enable
+  FC_SE = 32'h20,  // Sector Erase 4KB
+  FC_PP = 32'h02;  // Page Program
 
   // OBI FSM
   enum logic [1:0] {
