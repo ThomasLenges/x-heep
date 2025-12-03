@@ -31,11 +31,17 @@ module my_ip #(
   my_ip_hw2reg_t hw2reg;
 
   // FLASH COMMANDS
-  localparam logic [31:0] FC_RD = 32'h03,  // Read Data
+  localparam logic [31:0] 
+  FC_RD = 32'h03,  // Read Data
   FC_RSR1 = 32'h05,  // Read Status Register 1
   FC_WE = 32'h06,  // Write Enable
   FC_SE = 32'h20,  // Sector Erase 4KB
-  FC_PP = 32'h02;  // Page Program
+  FC_PP = 32'h02,  // Page Program
+
+  SE_WSIZE = 32'h400,  // Sector size in words
+  SE_BSIZE = 32'h1000, // Sector size in bytes
+  PAGE_WSIZE = 32'h40, // Page size in words
+  PAGE_BSIZE = 32'h100; // Page size in bytes
 
   // OBI FSM
   enum logic [1:0] {
@@ -113,6 +119,7 @@ module my_ip #(
     TOP_READ,
     TOP_FWAIT,
     TOP_ERASE,
+    TOP_MODIFY,
     TOP_WRITE
   } top_state_e;
 
@@ -166,6 +173,20 @@ module my_ip #(
     ERASE_SE_SEND_CMD
   } erase_state_e;
 
+  // MODIFY FSM
+  typedef enum logic [3:0] {
+    MODIFY_IDLE,
+    MODIFY_DMA_SRC_PTR,
+    MODIFY_DMA_DST_PTR,
+    MODIFY_DMA_SRC_INC,
+    MODIFY_DMA_DST_INC,
+    MODIFY_DMA_SRC_TYPE,
+    MODIFY_DMA_DST_TYPE,
+    MODIFY_DMA_TRIG,
+    MODIFY_DMA_SIZE_D1,
+    MODIFY_TRANS
+  } modify_state_e;
+
   // WRITE FSM
   typedef enum logic [4:0] {
     WRITE_IDLE,
@@ -194,8 +215,11 @@ module my_ip #(
   read_state_e read_state_q, read_state_d;
   erase_state_e erase_state_q, erase_state_d;
   fwait_state_e fwait_state_q, fwait_state_d;
+  modify_state_e modify_state_q, modify_state_d;
   write_state_e write_state_q, write_state_d;
   logic [1:0] fwait_cnt_q, fwait_cnt_d;
+  logic [3:0] page_cnt_q, page_cnt_d;
+  logic [31:0] sector_offset, iteration_cnt_d, iteration_cnt_q;
 
   logic pass_fwait;
 
@@ -212,15 +236,21 @@ module my_ip #(
       read_state_q  <= READ_IDLE;
       erase_state_q <= ERASE_IDLE;
       fwait_state_q <= FWAIT_IDLE;
+      modify_state_q <= MODIFY_IDLE;
       write_state_q <= WRITE_IDLE;
       fwait_cnt_q   <= 2'b0;
+      page_cnt_q    <= 4'b0;
+      iteration_cnt_q <= 32'h0;
     end else begin
       top_state_q   <= top_state_d;
       read_state_q  <= read_state_d;
       erase_state_q <= erase_state_d;
       fwait_state_q <= fwait_state_d;
+      modify_state_q <= modify_state_d;
       write_state_q <= write_state_d;
       fwait_cnt_q   <= fwait_cnt_d;
+      page_cnt_q    <= page_cnt_d;
+      iteration_cnt_q <= iteration_cnt_d;
     end
   end
 
@@ -235,11 +265,19 @@ module my_ip #(
     read_state_d = read_state_q;
     erase_state_d = erase_state_q;
     fwait_state_d = fwait_state_q;
+    modify_state_d = modify_state_q;
     write_state_d = write_state_q;
     fwait_cnt_d = fwait_cnt_q;
+    page_cnt_d  = page_cnt_q;
+    iteration_cnt_d = iteration_cnt_q;
+
+    sector_offset = 32'h0;
 
     hw2reg.control.start.de = 1'b0;
     hw2reg.control.start.d = 1'b0;
+
+    hw2reg.length.de = 1'b0;
+    hw2reg.length.d = 32'h0;
 
     // ========== TOP FSM ==================
 
@@ -299,7 +337,7 @@ module my_ip #(
 
           READ_DMA_DST_INC: begin
             address = DMA_START_ADDRESS + {25'b0, DMA_DST_PTR_INC_D1_OFFSET};
-            data = 32'h4;  // Every address has a word or a byte?
+            data = 32'h4;  
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -349,10 +387,14 @@ module my_ip #(
             w_enable  = 1'b1;
             obi_start = 1'b1;
 
-            if (reg2hw.length % 4 == 0) begin
-              data = reg2hw.length >> 2;  // Number of bytes to transfer
+            if (reg2hw.control.rnw) begin
+              if (reg2hw.length % 4 == 0) begin
+                data = reg2hw.length >> 2;  // Number of words to transfer
+              end else begin
+                data = (reg2hw.length >> 2) + 1;  // Number of bytes to transfer rounded to next word
+              end
             end else begin
-              data = (reg2hw.length >> 2) + 1;  // Number of bytes to transfer rounded to next word
+              data = SE_WSIZE; // Number of words to read from flash (a 4KB sector)
             end
 
             if (obi_finish) begin
@@ -371,9 +413,14 @@ module my_ip #(
 
           READ_SPI_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) | FC_RD;
             w_enable = 1'b1;
             obi_start = 1'b1;
+
+            if (reg2hw.control.rnw) begin
+              data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) | FC_RD; // Gets the direct address
+            end else begin
+              data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00fff000)) >> 8) << 8) | FC_RD; // Gets sector start address
+            end  
 
             if (obi_finish) begin
               read_state_d = READ_SPI_WAIT_READY_1;
@@ -411,11 +458,15 @@ module my_ip #(
 
           READ_SPI_SEND_CMD_2: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_COMMAND_OFFSET};
-            data = {
-              3'h0, 2'h1, 2'h0, 1'h0, reg2hw.length[23:0] - 1'h1
-            };  // Empty + Direction + Speed + Csaat + Length
             w_enable = 1'b1;
             obi_start = 1'b1;
+
+            if(reg2hw.control.rnw) begin
+              data = {3'h0, 2'h1, 2'h0, 1'h0, reg2hw.length[23:0] - 1'h1};  // Empty + Direction + Speed + Csaat + Length
+            end else begin
+              data = {3'h0, 2'h1, 2'h0, 1'h0, SE_BSIZE[23:0] - 1'h1};  // Empty + Direction + Speed + Csaat + Length
+            end
+              
 
             if (obi_finish) begin
               read_state_d = READ_TRANS;
@@ -581,17 +632,17 @@ module my_ip #(
                 case (fwait_cnt_q)
 
                   2'h0: begin  // Enter erase
-                    fwait_cnt_d   = fwait_cnt_q + 1'h1;
+                    fwait_cnt_d   = 2'h1;
                     fwait_state_d = FWAIT_IDLE;
                     top_state_d   = TOP_ERASE;
                     erase_state_d = ERASE_WE_CHECK_TX_FIFO;
                   end
 
                   2'h1: begin  // Enter write
-                    fwait_cnt_d   = fwait_cnt_q + 1'h1;
+                    fwait_cnt_d   = 2'h2;
                     fwait_state_d = FWAIT_IDLE;
                     top_state_d   = TOP_WRITE;
-                    write_state_d = WRITE_PP_CHECK_TX_FIFO;
+                    modify_state_d = MODIFY_IDLE;
                   end
 
                   2'h2: begin  // Exit write
@@ -680,8 +731,8 @@ module my_ip #(
 
           ERASE_SE_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) |
-                FC_SE;  // May need to change address!
+            data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00fff000)) >> 8) << 8) |
+                FC_SE;  // Sector erase on the read address
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -718,6 +769,141 @@ module my_ip #(
         endcase
       end
 
+      // ========== MODIFY FSM =================
+      TOP_MODIFY: begin
+
+        if (iteration_cnt_d == 0) begin
+          sector_offset = reg2hw.r_address & 32'h00000fff; // Offset within sector
+        end else begin
+          sector_offset = 32'h0; // Begin from start of sector for next iterations
+        end
+
+        case (modify_state_q)
+          MODIFY_IDLE: begin
+            address   = DMA_START_ADDRESS + {25'b0, DMA_STATUS_OFFSET};
+            obi_start = 1'b1;
+
+            if (obi_finish && read_value[0]) begin  // DMA ready
+              modify_state_d = MODIFY_DMA_SRC_PTR;
+            end
+          end
+
+          MODIFY_DMA_SRC_PTR: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_SRC_PTR_OFFSET};
+            data = reg2hw.md_address;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              modify_state_d = MODIFY_DMA_DST_PTR;
+            end
+          end
+
+          MODIFY_DMA_DST_PTR: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_DST_PTR_OFFSET};
+            data = reg2hw.s_address + sector_offset; // Need to account for offset within sector for first iteration
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              modify_state_d = MODIFY_DMA_SRC_INC;
+            end
+          end
+
+          MODIFY_DMA_SRC_INC: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_SRC_PTR_INC_D1_OFFSET};
+            data = 32'h4;  // Go through the data which has to be incorporated to the sector buffer
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              modify_state_d = MODIFY_DMA_DST_INC;
+            end
+          end
+
+          MODIFY_DMA_DST_INC: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_DST_PTR_INC_D1_OFFSET};
+            data = 32'h4;  // Go through sector buffer
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              modify_state_d = MODIFY_DMA_SRC_TYPE;
+            end
+          end
+
+          MODIFY_DMA_SRC_TYPE: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_SRC_DATA_TYPE_OFFSET};
+            data = 32'h0;  // 32-bit word
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              modify_state_d = MODIFY_DMA_DST_TYPE;
+            end
+          end
+
+          MODIFY_DMA_DST_TYPE: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_DST_DATA_TYPE_OFFSET};
+            data = 32'h0;  // 32-bit word
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              modify_state_d = MODIFY_DMA_TRIG;
+            end
+          end
+
+          MODIFY_DMA_TRIG: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_SLOT_OFFSET};
+            data = {
+              16'h0, 16'h0
+            };  // TX_TRG: Memory write trigger + RX_TRG: Memory read trigger
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              modify_state_d = MODIFY_DMA_SIZE_D1;
+            end
+          end
+
+          MODIFY_DMA_SIZE_D1: begin
+            address   = DMA_START_ADDRESS + {25'b0, DMA_SIZE_D1_OFFSET};
+            w_enable  = 1'b1;
+            obi_start = 1'b1;
+
+            hw2reg.length.de = 1'b1;
+            if (reg2hw.length < SE_BSIZE - sector_offset) begin
+              data = (reg2hw.length << 2);  // Number of words to transfer
+
+              hw2reg.length.d  = 32'h0;  // Indicate that all data has been transferred in this iteration
+            end else begin
+              data = ((SE_BSIZE - sector_offset) << 2); // Number of words to transfer remaining in sector (can be entire sector also)
+
+              hw2reg.length.d  = reg2hw.length - (SE_BSIZE - sector_offset);  // Indicate remaining length to be transferred in next iterations
+            end
+
+            
+            if (obi_finish) begin
+              modify_state_d = MODIFY_TRANS;
+            end
+          end
+
+          MODIFY_TRANS: begin
+            if (dma_done[0]) begin
+              modify_state_d = MODIFY_IDLE;
+              top_state_d = TOP_WRITE;
+              write_state_d = WRITE_PP_CHECK_TX_FIFO;
+            end
+          end
+
+
+          default: begin
+            modify_state_d = MODIFY_IDLE;
+          end
+        endcase
+      end
+
       // ========== WRITE FSM ==================
 
       TOP_WRITE: begin
@@ -737,10 +923,12 @@ module my_ip #(
 
           WRITE_PP_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) |
-                FC_PP;  // May need to change address!
+            data = (((bitfield_byteswap32((reg2hw.r_address & 32'h00fff000) | ({28'h0, page_cnt_q} << 8))) >> 8) << 8) |
+                FC_PP;  // Program page per page in entire sector which we are currently writing to (16 pages per sector)
             w_enable = 1'b1;
             obi_start = 1'b1;
+
+            page_cnt_d = page_cnt_q + 1'h1;
 
             if (obi_finish) begin
               write_state_d = WRITE_PP_WAIT_READY;
@@ -778,7 +966,7 @@ module my_ip #(
 
           WRITE_DMA_SRC_PTR: begin
             address = DMA_START_ADDRESS + {25'b0, DMA_SRC_PTR_OFFSET};
-            data = reg2hw.s_address;
+            data = reg2hw.s_address + ({28'h0, page_cnt_q} << 8);
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -800,7 +988,7 @@ module my_ip #(
 
           WRITE_DMA_SRC_INC: begin
             address = DMA_START_ADDRESS + {25'b0, DMA_SRC_PTR_INC_D1_OFFSET};
-            data = 32'h4;  // Or 1?
+            data = 32'h4;  
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -853,17 +1041,11 @@ module my_ip #(
             end
           end
 
-          // Need to account for more complex situations
           WRITE_DMA_SIZE_D1: begin
             address   = DMA_START_ADDRESS + {25'b0, DMA_SIZE_D1_OFFSET};
+            data = PAGE_WSIZE;
             w_enable  = 1'b1;
             obi_start = 1'b1;
-
-            if (reg2hw.length % 4 == 0) begin
-              data = reg2hw.length >> 2;  // Number of bytes to transfer
-            end else begin
-              data = (reg2hw.length >> 2) + 1;  // Number of bytes to transfer rounded to next word
-            end
 
             if (obi_finish) begin
               write_state_d = WRITE_TRANS;
@@ -888,15 +1070,26 @@ module my_ip #(
           WRITE_PP_SEND_CMD_2: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_COMMAND_OFFSET};
             data = {
-              3'h0, 2'h2, 2'h0, 1'h0, reg2hw.length[23:0] - 1'h1
+              3'h0, 2'h2, 2'h0, 1'h0, PAGE_BSIZE[23:0] - 1'h1
             };  // Empty + Direction + Speed + Csaat + Length
             w_enable = 1'b1;
             obi_start = 1'b1;
 
             if (obi_finish) begin
-              write_state_d = WRITE_IDLE;
-              top_state_d   = TOP_FWAIT;
-              fwait_state_d = FWAIT_SET_RXWM_R;
+              if (page_cnt_q == 4'hf) begin
+                if (reg2hw.length == 0) begin // DONE
+                write_state_d = WRITE_IDLE;
+                top_state_d   = TOP_FWAIT;
+                fwait_state_d = FWAIT_SET_RXWM_R;
+                end else begin // REPEAT for next sector
+                  page_cnt_d  = 4'b0;
+                  iteration_cnt_d = iteration_cnt_q + 1'h1;
+                  top_state_d = TOP_IDLE;
+                  write_state_d = WRITE_IDLE;
+                end
+              end else begin
+                write_state_d = WRITE_PP_CHECK_TX_FIFO;
+              end
             end
           end
 

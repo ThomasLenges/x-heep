@@ -33,14 +33,17 @@ extern "C" {
 #define MY_IP_STATUS_REG_OFFSET 0x10
 #define MY_IP_STATUS_READY_BIT 0
 
-// Address in Flash to read from
+// Address in Flash to read from/write to
 #define MY_IP_R_ADDRESS_REG_OFFSET 0x14
 
 // Address to store read data from SPI_FLASH
 #define MY_IP_S_ADDRESS_REG_OFFSET 0x18
 
+// Address where data with which we have to modify the flash is
+#define MY_IP_MD_ADDRESS_REG_OFFSET 0x1c
+
 // Length of data to W/R
-#define MY_IP_LENGTH_REG_OFFSET 0x1c
+#define MY_IP_LENGTH_REG_OFFSET 0x20
 
 #ifdef __cplusplus
 }  // extern "C"

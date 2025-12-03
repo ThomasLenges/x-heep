@@ -26,7 +26,7 @@
     }
 
     { name: "R_ADDRESS"
-      desc: "Address in Flash to read from"
+      desc: "Address in Flash to read from/write to"
       swaccess: "rw"
       hwaccess: "hrw"
       fields: [
@@ -40,6 +40,15 @@
       hwaccess: "hrw"
       fields: [
         { bits: "31:0", name: "S_ADDRESS", desc: "Address to store read data from SPI_FLASH" }
+      ]
+    }
+
+    { name: "MD_ADDRESS"
+      desc: "Address where data with which we have to modify the flash is"
+      swaccess: "rw"
+      hwaccess: "hrw"
+      fields: [
+        { bits: "31:0", name: "MD_ADDRESS", desc: "Address where data with which we have to modify the flash is" }
       ]
     }
 

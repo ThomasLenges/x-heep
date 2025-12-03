@@ -5,7 +5,7 @@
 **                                                                         **
 ** project  : x-heep                                                       **
 ** filename : my_ip_structs.h                                 **
-** date     : 24/11/2025                                                      **
+** date     : 02/12/2025                                                      **
 **                                                                         **
 *****************************************************************************
 **                                                                         **
@@ -16,7 +16,7 @@
 
 /**
 * @file   my_ip_structs.h
-* @date   24/11/2025
+* @date   02/12/2025
 * @brief  Contains structs for every register
 *
 * This file contains the structs of the registes of the peripheral.
@@ -65,9 +65,11 @@ typedef struct {
 
   uint32_t STATUS;                                /*!< Status register for flash controller*/
 
-  uint32_t R_ADDRESS;                             /*!< Address in Flash to read from*/
+  uint32_t R_ADDRESS;                             /*!< Address in Flash to read from/write to*/
 
   uint32_t S_ADDRESS;                             /*!< Address to store read data from SPI_FLASH*/
+
+  uint32_t MD_ADDRESS;                            /*!< Address where data with which we have to modify the flash is*/
 
   uint32_t LENGTH;                                /*!< Length of data to W/R*/
 

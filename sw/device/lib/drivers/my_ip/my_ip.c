@@ -1,5 +1,5 @@
 #include "my_ip_structs.h"
-#include "my_ip.h"
+#include "my_ip_regs.h"
 
 
 __attribute__((optimize("O0"))) uint32_t my_ip_is_ready()

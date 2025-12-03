@@ -5,7 +5,7 @@
 #include "core_v_mini_mcu.h"
 #include "x-heep.h"
 
-#include "my_ip.h"
+#include "my_ip_regs.h"
 #include "my_ip_structs.h"
 
 #include "dma.h"
