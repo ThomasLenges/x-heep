@@ -872,15 +872,10 @@ module my_ip #(
             w_enable  = 1'b1;
             obi_start = 1'b1;
 
-            hw2reg.length.de = 1'b1;
             if (reg2hw.length < SE_BSIZE - sector_offset) begin
               data = (reg2hw.length << 2);  // Number of words to transfer
-
-              hw2reg.length.d  = 32'h0;  // Indicate that all data has been transferred in this iteration
             end else begin
               data = ((SE_BSIZE - sector_offset) << 2); // Number of words to transfer remaining in sector (can be entire sector also)
-
-              hw2reg.length.d  = reg2hw.length - (SE_BSIZE - sector_offset);  // Indicate remaining length to be transferred in next iterations
             end
 
             
@@ -890,6 +885,13 @@ module my_ip #(
           end
 
           MODIFY_TRANS: begin
+            hw2reg.length.de = 1'b1;
+            if (reg2hw.length < SE_BSIZE - sector_offset) begin
+              hw2reg.length.d  = 32'h0;  // Indicate that all data has been transferred in this iteration
+            end else begin
+              hw2reg.length.d  = reg2hw.length - (SE_BSIZE - sector_offset);  // Indicate remaining length to be transferred in next iterations
+            end
+            
             if (dma_done[0]) begin
               modify_state_d = MODIFY_IDLE;
               top_state_d = TOP_WRITE;
