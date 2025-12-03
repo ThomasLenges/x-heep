@@ -891,7 +891,7 @@ module my_ip #(
             end else begin
               hw2reg.length.d  = reg2hw.length - (SE_BSIZE - sector_offset);  // Indicate remaining length to be transferred in next iterations
             end
-            
+
             if (dma_done[0]) begin
               modify_state_d = MODIFY_IDLE;
               top_state_d = TOP_WRITE;
@@ -930,10 +930,10 @@ module my_ip #(
             w_enable = 1'b1;
             obi_start = 1'b1;
 
-            page_cnt_d = page_cnt_q + 1'h1;
 
             if (obi_finish) begin
               write_state_d = WRITE_PP_WAIT_READY;
+              page_cnt_d = page_cnt_q + 1'h1;
             end
           end
 
