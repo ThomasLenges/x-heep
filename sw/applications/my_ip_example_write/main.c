@@ -197,3 +197,5 @@ uint32_t check_result(uint8_t *test_buffer, uint32_t len) {
 
     return errors;
 }
+
+// QUESTASIM SIM DURATION (BYTES_TO_WRITE 1028): 11.000.000 ns
