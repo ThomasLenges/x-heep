@@ -216,3 +216,5 @@ void erase_memory(uint32_t addr) {
     w25q128jw_4k_erase(addr);
     #endif
 }
+
+// QUESTASIM DURATION: 10'000'000 (SUCCESS)

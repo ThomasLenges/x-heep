@@ -1128,7 +1128,7 @@ module my_ip #(
                 end
               end else begin
                 page_cnt_d = page_cnt_q + 1'h1;
-                write_state_d = WRITE_PP_CHECK_TX_FIFO;
+                write_state_d = WRITE_WE_CHECK_TX_FIFO;
               end
             end
           end

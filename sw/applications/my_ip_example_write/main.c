@@ -4,6 +4,7 @@
 
 #include "core_v_mini_mcu.h"
 #include "x-heep.h"
+#include "w25q128jw.h"
 
 #include "my_ip_regs.h"
 #include "my_ip_structs.h"
@@ -158,6 +159,11 @@ __attribute__((optimize("O0"))) void my_ip_rflash(){
 }
 
 __attribute__((optimize("O0"))) void my_ip_run(){
+    spi_host_t* spi;
+    spi = spi_flash;
+
+    if (w25q128jw_init(spi) != FLASH_OK) return EXIT_FAILURE;
+
     my_ip_wflash();
 
     // Wait for DMA transfer to complete (write operation is completed)
