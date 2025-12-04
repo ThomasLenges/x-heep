@@ -190,6 +190,12 @@ module my_ip #(
   // WRITE FSM
   typedef enum logic [4:0] {
     WRITE_IDLE,
+
+    WRITE_WE_CHECK_TX_FIFO,
+    WRITE_WE_FILL_TX_FIFO,
+    WRITE_WE_WAIT_READY,
+    WRITE_WE_SEND_CMD,
+
     WRITE_PP_CHECK_TX_FIFO,
     WRITE_PP_FILL_TX_FIFO,
     WRITE_PP_WAIT_READY,
@@ -923,7 +929,6 @@ module my_ip #(
 
             if (obi_finish) begin
               write_state_d = WRITE_WE_WAIT_READY;
-              page_cnt_d = page_cnt_q + 1'h1;
             end
           end
 
@@ -966,7 +971,6 @@ module my_ip #(
 
             if (obi_finish) begin
               write_state_d = WRITE_PP_WAIT_READY;
-              page_cnt_d = page_cnt_q + 1'h1;
             end
           end
 
@@ -1123,6 +1127,7 @@ module my_ip #(
                   write_state_d = WRITE_IDLE;
                 end
               end else begin
+                page_cnt_d = page_cnt_q + 1'h1;
                 write_state_d = WRITE_PP_CHECK_TX_FIFO;
               end
             end
