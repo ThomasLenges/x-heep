@@ -510,7 +510,6 @@ module my_ip #(
                   fwait_cnt_d   = 2'h1;
                   fwait_state_d = FWAIT_IDLE;
                   top_state_d   = TOP_MODIFY;
-                  erase_state_d = ERASE_WE_CHECK_TX_FIFO;
                 end
 
                 2'h1: begin  // All finished (Read -> Modify -> Write) (No wait and erase)
@@ -888,7 +887,7 @@ module my_ip #(
             if (dma_done[0]) begin
               modify_state_d = MODIFY_IDLE;
               top_state_d = TOP_WRITE;
-              write_state_d = WRITE_PP_CHECK_TX_FIFO;
+              write_state_d = WRITE_WE_CHECK_TX_FIFO;
             end
           end
 
@@ -905,6 +904,47 @@ module my_ip #(
         case (write_state_q)
           WRITE_IDLE: begin
             // Nothing to do here.
+          end
+
+          WRITE_WE_CHECK_TX_FIFO: begin
+            address   = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_STATUS_OFFSET};
+            obi_start = 1'b1;
+
+            if (obi_finish && read_value[7:0] < SPI_FLASH_TX_FIFO_DEPTH) begin
+              write_state_d = WRITE_WE_FILL_TX_FIFO;
+            end
+          end
+
+          WRITE_WE_FILL_TX_FIFO: begin
+            address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
+            data = FC_WE;  // Required every time before issuing a write command
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              write_state_d = WRITE_WE_WAIT_READY;
+              page_cnt_d = page_cnt_q + 1'h1;
+            end
+          end
+
+          WRITE_WE_WAIT_READY: begin
+            address   = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_STATUS_OFFSET};
+            obi_start = 1'b1;
+
+            if (obi_finish && read_value[31] == 1'b1) begin
+              write_state_d = WRITE_WE_SEND_CMD;
+            end
+          end
+
+          WRITE_WE_SEND_CMD: begin
+            address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_COMMAND_OFFSET};
+            data = {3'h0, 2'h2, 2'h0, 1'h0, 24'h0};  // Empty + Direction + Speed + Csaat + Length
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              write_state_d = WRITE_PP_CHECK_TX_FIFO;
+            end
           end
 
           WRITE_PP_CHECK_TX_FIFO: begin
