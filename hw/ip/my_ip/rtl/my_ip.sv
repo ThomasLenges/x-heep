@@ -507,10 +507,13 @@ module my_ip #(
             if (pass_fwait) begin
               case (fwait_cnt_q)
                 2'h0: begin  // Enter erase
-                  fwait_cnt_d   = 2'h1;
-                  fwait_state_d = FWAIT_IDLE;
-                  top_state_d   = TOP_ERASE;
-                  erase_state_d = ERASE_WE_CHECK_TX_FIFO;
+                  // fwait_cnt_d   = 2'h1;
+                  // fwait_state_d = FWAIT_IDLE;
+                  // top_state_d   = TOP_ERASE;
+                  // erase_state_d = ERASE_WE_CHECK_TX_FIFO;
+
+                  // TOP DEBUG
+                  top_state_d   = TOP_IDLE;
                 end
 
                 2'h1: begin  // Enter write
@@ -631,14 +634,10 @@ module my_ip #(
                 case (fwait_cnt_q)
 
                   2'h0: begin  // Enter erase
-                    // fwait_cnt_d   = 2'h1;
-                    // fwait_state_d = FWAIT_IDLE;
-                    // top_state_d   = TOP_ERASE;
-                    // erase_state_d = ERASE_WE_CHECK_TX_FIFO;
-
-                    // TOP DEBUG
-                    top_state_d   = TOP_IDLE;
+                    fwait_cnt_d   = 2'h1;
                     fwait_state_d = FWAIT_IDLE;
+                    top_state_d   = TOP_ERASE;
+                    erase_state_d = ERASE_WE_CHECK_TX_FIFO;
                   end
 
                   2'h1: begin  // Enter write
