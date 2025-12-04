@@ -169,3 +169,5 @@ uint32_t check_result(uint8_t *test_buffer, uint32_t len) {
 
     return errors;
 }
+
+// QUESTASIM SIM DURATION (R_WORDS = 32): 6.500.000 ns

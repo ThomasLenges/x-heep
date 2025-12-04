@@ -174,6 +174,11 @@ int main(void) {
 
     my_ip_run();
 
+    printf("buffer_data[0] is: 0x%08x\n",flash_read_data[0]);
+    printf("buffer_data[1] is: 0x%08x\n",flash_read_data[1]);
+    printf("buffer_data[256] is: 0x%08x\n",flash_read_data[256]);
+
+
     uint32_t res =  check_result(flash_write_data, BYTES_TO_WRITE);
 
     if (res == 0){

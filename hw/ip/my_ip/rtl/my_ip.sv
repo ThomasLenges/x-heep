@@ -631,10 +631,14 @@ module my_ip #(
                 case (fwait_cnt_q)
 
                   2'h0: begin  // Enter erase
-                    fwait_cnt_d   = 2'h1;
+                    // fwait_cnt_d   = 2'h1;
+                    // fwait_state_d = FWAIT_IDLE;
+                    // top_state_d   = TOP_ERASE;
+                    // erase_state_d = ERASE_WE_CHECK_TX_FIFO;
+
+                    // TOP DEBUG
+                    top_state_d   = TOP_IDLE;
                     fwait_state_d = FWAIT_IDLE;
-                    top_state_d   = TOP_ERASE;
-                    erase_state_d = ERASE_WE_CHECK_TX_FIFO;
                   end
 
                   2'h1: begin  // Enter write
@@ -1080,9 +1084,9 @@ module my_ip #(
             if (obi_finish) begin
               if (page_cnt_q == 4'hf) begin
                 if (reg2hw.length == 0) begin // DONE
-                write_state_d = WRITE_IDLE;
-                top_state_d   = TOP_FWAIT;
-                fwait_state_d = FWAIT_SET_RXWM_R;
+                  write_state_d = WRITE_IDLE;
+                  top_state_d   = TOP_FWAIT;
+                  fwait_state_d = FWAIT_SET_RXWM_R;
                 end else begin // REPEAT for next sector
                   page_cnt_d  = 4'b0;
                   iteration_cnt_d = iteration_cnt_q + 1'h1;
