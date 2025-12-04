@@ -506,27 +506,17 @@ module my_ip #(
           FWAIT_SET_RXWM_R: begin
             if (pass_fwait) begin
               case (fwait_cnt_q)
-                2'h0: begin  // Enter erase
-                  // fwait_cnt_d   = 2'h1;
-                  // fwait_state_d = FWAIT_IDLE;
-                  // top_state_d   = TOP_ERASE;
-                  // erase_state_d = ERASE_WE_CHECK_TX_FIFO;
-
-                  // TOP DEBUG
-                  top_state_d   = TOP_IDLE;
-                end
-
-                2'h1: begin  // Enter write
-                  fwait_cnt_d   = 2'h2;
+                2'h0: begin  // Enter modify
+                  fwait_cnt_d   = 2'h1;
                   fwait_state_d = FWAIT_IDLE;
                   top_state_d   = TOP_MODIFY;
-                  modify_state_d = MODIFY_IDLE;
+                  erase_state_d = ERASE_WE_CHECK_TX_FIFO;
                 end
 
-                2'h2: begin  // Exit write
-                  fwait_cnt_d = 2'h0;
+                2'h1: begin  // All finished (Read -> Modify -> Write) (No wait and erase)
+                  fwait_cnt_d   = 2'h0;
                   fwait_state_d = FWAIT_IDLE;
-                  top_state_d = TOP_IDLE;
+                  top_state_d   = TOP_IDLE;
                   my_ip_done_o = 1'b1;
                   hw2reg.control.start.de = 1'b1;
                   hw2reg.control.start.d = 1'b0;
