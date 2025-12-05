@@ -70,8 +70,6 @@ uint32_t *rr_address = flash_read_data;
 uint32_t check_result(uint8_t *test_buffer, uint32_t len);
 
 __attribute__((optimize("O0"))) void my_ip_wflash(){
-    // Clean DMA
-    dma_init(NULL);
     // Gives the address offset how where the test_buffer is stored in the flash
     // r_address = heep_get_flash_address_offset(r_data);
     // Load r_address
@@ -159,6 +157,9 @@ __attribute__((optimize("O0"))) void my_ip_rflash(){
 }
 
 __attribute__((optimize("O0"))) void my_ip_run(){
+    // Clean DMA
+    dma_init(NULL);
+    
     spi_host_t* spi;
     spi = spi_flash;
 

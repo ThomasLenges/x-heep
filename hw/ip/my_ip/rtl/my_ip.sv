@@ -2,7 +2,9 @@ module my_ip #(
     parameter type reg_req_t = reg_pkg::reg_req_t,
     parameter type reg_rsp_t = reg_pkg::reg_rsp_t,
     parameter logic [7:0] SPI_FLASH_TX_FIFO_DEPTH = 8'h48,
-    parameter logic [31:0] SPI_FLASH_RX_FIFO_DEPTH = 32'h40
+    parameter logic [31:0] SPI_FLASH_RX_FIFO_DEPTH = 32'h40,
+    parameter logic DMA_ZERO_PADDING = 1'b1,
+    parameter logic DMA_ADDR_MODE = 1'b1
 ) (
     input logic clk_i,
     input logic rst_ni,
@@ -113,6 +115,39 @@ module my_ip #(
     endcase
   end
 
+  // DMA init FSM
+  typedef enum logic [1:0]{
+    DMA_INIT_IDLE,
+    DMA_INIT_SRC_PTR,
+    DMA_INIT_DST_PTR,
+    DMA_INIT_ADDR_PTR,
+    DMA_INIT_SIZE_D1,
+    DMA_INIT_SIZE_D2,
+    DMA_INIT_SRC_PTR_INC_D1,
+    DMA_INIT_SRC_PTR_INC_D2,
+    DMA_INIT_DST_PTR_INC_D1,
+    DMA_INIT_DST_PTR_INC_D2,
+    DMA_INIT_SLOT,
+    DMA_INIT_SRC_DATA_TYPE,
+    DMA_INIT_DST_DATA_TYPE,
+    DMA_INIT_SIGN_EXT,
+    DMA_INIT_MODE,
+    DMA_INIT_DIM_CONFIG,
+    DMA_INIT_DIM_INV,
+    DMA_INIT_PAD_TOP,
+    DMA_INIT_PAD_BOTTOM,
+    DMA_INIT_PAD_RIGHT,
+    DMA_INIT_PAD_LEFT,
+    DMA_INIT_WINDOW_SIZE,
+    DMA_INIT_INTERRUPT_EN
+  } dma_init_state_e;
+
+  typedef enum logic [2:0] {
+    RETURN_READ,
+    RETURN_MODIFY,
+    RETURN_WRITE
+  } dma_init_return_e;
+
   // Top FSM
   typedef enum logic [2:0] {
     TOP_IDLE,
@@ -120,7 +155,8 @@ module my_ip #(
     TOP_FWAIT,
     TOP_ERASE,
     TOP_MODIFY,
-    TOP_WRITE
+    TOP_WRITE,
+    TOP_DMA_INIT
   } top_state_e;
 
   // READ FSM
@@ -217,6 +253,8 @@ module my_ip #(
 
   } write_state_e;
 
+  dma_init_state_e dma_init_state_q, dma_init_state_d;
+  dma_init_return_e dma_init_return_q, dma_init_return_d;
   top_state_e top_state_q, top_state_d;
   read_state_e read_state_q, read_state_d;
   erase_state_e erase_state_q, erase_state_d;
@@ -238,6 +276,8 @@ module my_ip #(
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
     if (!rst_ni) begin
+      dma_init_state_q <= DMA_INIT_IDLE;
+      dma_init_return_q <= RETURN_READ;
       top_state_q   <= TOP_IDLE;
       read_state_q  <= READ_IDLE;
       erase_state_q <= ERASE_IDLE;
@@ -248,6 +288,8 @@ module my_ip #(
       page_cnt_q    <= 4'b0;
       iteration_cnt_q <= 32'h0;
     end else begin
+      dma_init_state_q <= dma_init_state_d;
+      dma_init_return_q <= dma_init_return_d;
       top_state_q   <= top_state_d;
       read_state_q  <= read_state_d;
       erase_state_q <= erase_state_d;
@@ -267,6 +309,8 @@ module my_ip #(
     obi_start = 1'b0;
     my_ip_done_o = 1'b0;
 
+    dma_init_state_d = dma_init_state_q;
+    dma_init_return_d = dma_init_return_q;
     top_state_d = top_state_q;
     read_state_d = read_state_q;
     erase_state_d = erase_state_q;
@@ -285,6 +329,8 @@ module my_ip #(
     hw2reg.length.de = 1'b0;
     hw2reg.length.d = 32'h0;
 
+
+
     // ========== TOP FSM ==================
 
     case (top_state_q)
@@ -299,12 +345,9 @@ module my_ip #(
       TOP_READ: begin
         case (read_state_q)
           READ_IDLE: begin
-            address   = DMA_START_ADDRESS + {25'b0, DMA_STATUS_OFFSET};
-            obi_start = 1'b1;
-
-            if (obi_finish && read_value[0]) begin  // DMA ready
-              read_state_d = READ_DMA_SRC_PTR;
-            end
+            top_state_d = TOP_DMA_INIT;
+            dma_init_return_d = RETURN_READ;
+            read_state_d = READ_DMA_SRC_PTR;
           end
 
           READ_DMA_SRC_PTR: begin
@@ -778,12 +821,9 @@ module my_ip #(
 
         case (modify_state_q)
           MODIFY_IDLE: begin
-            address   = DMA_START_ADDRESS + {25'b0, DMA_STATUS_OFFSET};
-            obi_start = 1'b1;
-
-            if (obi_finish && read_value[0]) begin  // DMA ready
-              modify_state_d = MODIFY_DMA_SRC_PTR;
-            end
+            top_state_d = TOP_DMA_INIT;
+            dma_init_return_d = RETURN_MODIFY;
+            modify_state_d = MODIFY_DMA_SRC_PTR;
           end
 
           MODIFY_DMA_SRC_PTR: begin
@@ -995,12 +1035,9 @@ module my_ip #(
           end
 
           WRITE_DMA_CHECK_READY: begin
-            address   = DMA_START_ADDRESS + {25'b0, DMA_STATUS_OFFSET};
-            obi_start = 1'b1;
-
-            if (obi_finish && read_value[0]) begin  // DMA ready
-              write_state_d = WRITE_DMA_SRC_PTR;
-            end
+            top_state_d = TOP_DMA_INIT;
+            dma_init_return_d = RETURN_WRITE;
+            write_state_d = WRITE_DMA_SRC_PTR;
           end
 
           WRITE_DMA_SRC_PTR: begin
@@ -1135,6 +1172,295 @@ module my_ip #(
 
           default: begin
             write_state_d = WRITE_IDLE;
+          end
+        endcase
+      end
+
+            // ========== DMA INIT FSM ==================
+      TOP_DMA_INIT: begin
+        case(dma_init_state_q)
+          DMA_INIT_IDLE: begin
+            address   = DMA_START_ADDRESS + {25'b0, DMA_STATUS_OFFSET};
+            obi_start = 1'b1;
+
+            if (obi_finish && read_value[0]) begin  // DMA ready
+              dma_init_state_d = DMA_INIT_SRC_PTR;
+            end
+          end
+
+          DMA_INIT_SRC_PTR: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_SRC_PTR_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_DST_PTR;
+            end
+          end
+
+          DMA_INIT_DST_PTR: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_DST_PTR_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_SIZE_D1;
+            end
+          end
+
+          DMA_INIT_SIZE_D1: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_SIZE_D1_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_SIZE_D2;
+            end
+          end
+
+          DMA_INIT_SIZE_D2: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_SIZE_D2_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_SRC_PTR_INC_D1;
+            end
+          end
+
+          DMA_INIT_SRC_PTR_INC_D1: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_SRC_PTR_INC_D1_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_SRC_PTR_INC_D2;
+            end
+          end
+
+          DMA_INIT_SRC_PTR_INC_D2: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_SRC_PTR_INC_D2_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_DST_PTR_INC_D1;
+            end
+          end
+
+          DMA_INIT_DST_PTR_INC_D1: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_DST_PTR_INC_D1_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_DST_PTR_INC_D2;
+            end
+          end
+
+          DMA_INIT_DST_PTR_INC_D2: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_DST_PTR_INC_D2_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_SLOT;
+            end
+          end
+
+          DMA_INIT_SLOT: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_SLOT_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_SRC_DATA_TYPE;
+            end
+          end
+
+          DMA_INIT_SRC_DATA_TYPE: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_SRC_DATA_TYPE_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_DST_DATA_TYPE;
+            end
+          end
+
+          DMA_INIT_DST_DATA_TYPE: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_DST_DATA_TYPE_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_SIGN_EXT;
+            end
+          end
+
+          DMA_INIT_SIGN_EXT: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_SIGN_EXT_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_MODE;
+            end
+          end
+
+          DMA_INIT_MODE: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_MODE_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_DIM_CONFIG;
+            end
+          end
+
+          DMA_INIT_DIM_CONFIG: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_DIM_CONFIG_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_DIM_INV;
+            end
+          end
+
+          DMA_INIT_DIM_INV: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_DIM_INV_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_WINDOW_SIZE;
+            end
+          end
+
+          DMA_INIT_WINDOW_SIZE: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_WINDOW_SIZE_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_INTERRUPT_EN;
+            end
+          end
+
+          DMA_INIT_INTERRUPT_EN: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_INTERRUPT_EN_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              if (DMA_ZERO_PADDING) begin
+                dma_init_state_d = DMA_INIT_PAD_TOP;
+              end else begin
+                if (DMA_ADDR_MODE) begin
+                  dma_init_state_d = DMA_INIT_ADDR_PTR;
+                end else begin
+                  dma_init_state_d = DMA_INIT_REDIRECT;
+                end
+              end
+            end
+          end
+
+          DMA_INIT_PAD_TOP: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_PAD_TOP_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_PAD_BOTTOM;
+            end
+          end
+
+          DMA_INIT_PAD_BOTTOM: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_PAD_BOTTOM_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_PAD_RIGHT;
+            end
+          end
+
+          DMA_INIT_PAD_RIGHT: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_PAD_RIGHT_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_PAD_LEFT;
+            end
+          end
+
+          DMA_INIT_PAD_LEFT: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_PAD_LEFT_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              if (DMA_ADDR_MODE) begin
+                dma_init_state_d = DMA_INIT_ADDR_PTR;
+              end else begin
+                dma_init_state_d = DMA_INIT_REDIRECT;
+              end
+            end
+          end
+
+          DMA_INIT_ADDR_PTR: begin
+            address = DMA_START_ADDRESS + {25'b0, DMA_ADDR_PTR_OFFSET};
+            data = 32'h00000000;
+            w_enable = 1'b1;
+            obi_start = 1'b1;
+
+            if (obi_finish) begin
+              dma_init_state_d = DMA_INIT_REDIRECT;
+            end
+          end
+
+          DMA_INIT_REDIRECT: begin
+            dma_init_state_d = DMA_INIT_IDLE;
+            case(dma_init_return_q)
+              RETURN_MODIFY: begin
+                top_state_d = TOP_MODIFY;
+              end
+
+              RETURN_WRITE: begin
+                top_state_d = TOP_WRITE;
+              end
+
+              default: begin
+                top_state_d = TOP_IDLE;
+              end
+            endcase
+          end
+
+          default: begin
+            dma_init_state_d = DMA_INIT_IDLE;
           end
         endcase
       end
