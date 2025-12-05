@@ -116,7 +116,7 @@ module my_ip #(
   end
 
   // DMA init FSM
-  typedef enum logic [1:0]{
+  typedef enum logic [4:0] {
     DMA_INIT_IDLE,
     DMA_INIT_SRC_PTR,
     DMA_INIT_DST_PTR,
@@ -139,7 +139,8 @@ module my_ip #(
     DMA_INIT_PAD_RIGHT,
     DMA_INIT_PAD_LEFT,
     DMA_INIT_WINDOW_SIZE,
-    DMA_INIT_INTERRUPT_EN
+    DMA_INIT_INTERRUPT_EN,
+    DMA_INIT_REDIRECT
   } dma_init_state_e;
 
   typedef enum logic [2:0] {
