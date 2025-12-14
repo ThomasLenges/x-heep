@@ -39,24 +39,23 @@ uint32_t flash_write_data[257] = {
     0x76543228, 0xfedcbab0, 0x579a6fa8, 0x657d5c06, 0x758ee437, 0x0123457f, 0xfadbcaae, 0x89abde17,
     0x76543220, 0xfedcbaa8, 0x579a6fa0, 0x657d5bfe, 0x758ee42f, 0x01234577, 0xfedbcaa6, 0x89abde0f,
     0x76543221, 0xfedcbaa9, 0x579a6fa1, 0x657d5bff, 0x758ee430, 0x01234578, 0xfadbcaa7, 0x89abde10,
-    0x76543222, 0xfedcbaaa, 0x579a6fa2, 0x657d5c00, 0x758ee431, 0x01234579, 0xfadbcaa8, 0x89abde11,
+    0x76543222, 0xfedcbaaa, 0x579a6fa2, 0x657d5c01, 0x758ee431, 0x01234579, 0xfadbcaa8, 0x89abde11,
     0x76543223, 0xfedcbaab, 0x579a6fa3, 0x657d5c01, 0x758ee432, 0x0123457a, 0xfadbcaa9, 0x89abde12,
     0x76543224, 0xfedcbaac, 0x579a6fa4, 0x657d5c02, 0x758ee433, 0x0123457b, 0xfadbcaaa, 0x89abde13,
     0x76543225, 0xfedcbaad, 0x579a6fa5, 0x657d5c03, 0x758ee434, 0x0123457c, 0xfadbcaab, 0x89abde14,
     0x76543226, 0xfedcbaae, 0x579a6fa6, 0x657d5c04, 0x758ee435, 0x0123457d, 0xfadbcaac, 0x89abde15,
     0x76543227, 0xfedcbaaf, 0x579a6fa7, 0x657d5c05, 0x758ee436, 0x0123457e, 0xfadbcaad, 0x89abde16,
-    0x76543228, 0xfedcbab0, 0x579a6fa8, 0x657d5c06, 0x758ee437, 0x0123457f, 0xfadbcaae, 0x89abde17,
     0xAAAAAAAA
 };
 
 // End buffer (where what is read is stored and then to be modified with flash_write_data)
 uint32_t flash_read_data[1024];
 
-#define BYTES_TO_WRITE 1028
+#define BYTES_TO_WRITE 16
+#define WORDS_TO_WRITE (BYTES_TO_WRITE / 4)
 
 // Buffer in flash where we have to write
-int32_t __attribute__((section(".xheep_data_flash_only"))) __attribute__ ((aligned (16))) flash_write_buffer[BYTES_TO_WRITE];
-
+int32_t __attribute__((section(".xheep_data_flash_only"))) __attribute__ ((aligned (16))) flash_write_buffer[WORDS_TO_WRITE]; 
 
 // flash buffer address
 uint32_t *f_address = flash_write_buffer;
@@ -117,8 +116,6 @@ __attribute__((optimize("O0"))) void my_ip_wflash(){
 }
 
 __attribute__((optimize("O0"))) void my_ip_rflash(){
-    // Clean DMA
-    dma_init(NULL);
     // Verify the write operation
     write_register( (uint32_t)f_address,
                     MY_IP_R_ADDRESS_REG_OFFSET,
@@ -157,34 +154,41 @@ __attribute__((optimize("O0"))) void my_ip_rflash(){
 }
 
 __attribute__((optimize("O0"))) void my_ip_run(){
-    // Clean DMA
-    dma_init(NULL);
-    
     spi_host_t* spi;
     spi = spi_flash;
 
     if (w25q128jw_init(spi) != FLASH_OK) return EXIT_FAILURE;
+
+    printf("buffer_data[0] before anything: 0x%08x\n",flash_read_data[0]);
+    printf("buffer_data[1] before anything: 0x%08x\n",flash_read_data[1]);
+    printf("buffer_data[2] before anything: 0x%08x\n",flash_read_data[2]);
+    printf("buffer_data[-1] before anything: 0x%08x\n",flash_read_data[-1]);
 
     my_ip_wflash();
 
     // Wait for DMA transfer to complete (write operation is completed)
     while(!my_ip_is_ready());
 
+    printf("buffer_data[0] after write: 0x%08x\n",flash_read_data[0]);
+    printf("buffer_data[1] after write: 0x%08x\n",flash_read_data[1]);
+    printf("buffer_data[2] after write: 0x%08x\n",flash_read_data[2]);
+    printf("buffer_data[-1] after write: 0x%08x\n",flash_read_data[-1]);
+
     my_ip_rflash();
 
     // Wait for read to verify to be completed
     while(!my_ip_is_ready());
+
+    printf("buffer_data[0] after read: 0x%08x\n",flash_read_data[0]);
+    printf("buffer_data[1] after read: 0x%08x\n",flash_read_data[1]);
+    printf("buffer_data[2] after read: 0x%08x\n",flash_read_data[2]);
+    printf("buffer_data[-1] after read: 0x%08x\n",flash_read_data[-1]);
 }
 
 
 int main(void) {
 
     my_ip_run();
-
-    printf("buffer_data[0] is: 0x%08x\n",flash_read_data[0]);
-    printf("buffer_data[1] is: 0x%08x\n",flash_read_data[1]);
-    printf("buffer_data[256] is: 0x%08x\n",flash_read_data[256]);
-
 
     uint32_t res =  check_result(flash_write_data, BYTES_TO_WRITE);
 

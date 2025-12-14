@@ -1446,6 +1446,9 @@ module my_ip #(
           DMA_INIT_REDIRECT: begin
             dma_init_state_d = DMA_INIT_IDLE;
             case(dma_init_return_q)
+              RETURN_READ: begin
+                top_state_d = TOP_READ;
+              end
               RETURN_MODIFY: begin
                 top_state_d = TOP_MODIFY;
               end
