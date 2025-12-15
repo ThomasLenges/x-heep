@@ -51,15 +51,7 @@ uint32_t flash_write_data[257] = {
 // End buffer (where what is read is stored and then to be modified with flash_write_data)
 uint32_t flash_read_data[1024];
 
-#define BYTES_TO_WRITE 512 // 256 for page (From 0x76543211 to 0x89abde07) // 512 for two pages (From 0x76543211 to 0x89abde0f) 
-// Check for 4 that the value is only written once!
-
-// If not => Check problem from modify dma transfer (check on buffer before reading back if still zero) 
-// => Check for dma transfer during flash write
-
-// If yes try it also for 256
-
-// If yes check 257
+#define BYTES_TO_WRITE 4 
 #define WORDS_TO_WRITE (BYTES_TO_WRITE / 4)
 
 // Buffer in flash where we have to write
@@ -123,43 +115,6 @@ __attribute__((optimize("O0"))) void my_ip_wflash(){
                 );
 }
 
-__attribute__((optimize("O0"))) void my_ip_rflash(){
-    // Verify the write operation
-    write_register( (uint32_t)f_address,
-                    MY_IP_R_ADDRESS_REG_OFFSET,
-                    0xFFFFFFFF,
-                    0,
-                    MY_IP_START_ADDRESS
-                );
-    // Load s_address
-    write_register( (uint32_t)rr_address,
-                    MY_IP_S_ADDRESS_REG_OFFSET,
-                    0xFFFFFFFF,
-                    0,
-                    MY_IP_START_ADDRESS
-                );
-    // Load length
-    write_register( BYTES_TO_WRITE,
-                    MY_IP_LENGTH_REG_OFFSET,
-                    0xFFFFFFFF,
-                    0,
-                    MY_IP_START_ADDRESS
-                );
-    // Specify it is a read operation
-    write_register( 0x1,
-                    MY_IP_CONTROL_REG_OFFSET,
-                    0x1,
-                    MY_IP_CONTROL_RNW_BIT,
-                    MY_IP_START_ADDRESS
-                );
-    // Start read operation
-    write_register( 0x1,
-                    MY_IP_CONTROL_REG_OFFSET,
-                    0x1,
-                    MY_IP_CONTROL_START_BIT,
-                    MY_IP_START_ADDRESS
-                );
-}
 
 __attribute__((optimize("O0"))) void my_ip_run(){
     spi_host_t* spi;
@@ -182,15 +137,6 @@ __attribute__((optimize("O0"))) void my_ip_run(){
     printf("buffer_data[2] after write: 0x%08x\n",flash_read_data[2]);
     printf("buffer_data[-1] after write: 0x%08x\n",flash_read_data[3]);
 
-    my_ip_rflash();
-
-    // Wait for read to verify to be completed
-    while(!my_ip_is_ready());
-
-    printf("buffer_data[0] after read: 0x%08x\n",flash_read_data[0]);
-    printf("buffer_data[1] after read: 0x%08x\n",flash_read_data[1]);
-    printf("buffer_data[2] after read: 0x%08x\n",flash_read_data[2]);
-    printf("buffer_data[-1] after read: 0x%08x\n",flash_read_data[3]);
 }
 
 
@@ -198,7 +144,7 @@ int main(void) {
 
     my_ip_run();
 
-    uint32_t res =  check_result(flash_write_data, BYTES_TO_WRITE);
+    uint32_t res =  check_modify(flash_write_data, WORDS_TO_WRITE);
 
     if (res == 0){
         return EXIT_SUCCESS;
@@ -207,15 +153,25 @@ int main(void) {
     }
 }
 
-uint32_t check_result(uint8_t *test_buffer, uint32_t len) {
+uint32_t check_modify(uint32_t *expected_data, uint32_t len_words) {
     uint32_t errors = 0;
-    uint8_t *flash_read_data_char = (uint8_t *)flash_read_data;
 
-    for (uint32_t i = 0; i < len; i++) {
-        if (test_buffer[i] != flash_read_data_char[i]) {
-            printf("Error at position %d: expected %x, got %x\n", i, test_buffer[i], flash_read_data_char[i]);
+    // Verify flash_read_data (sector buffer) has correct modified data form flash_write_data
+    for (uint32_t i = 0; i < len_words; i++) {
+        if (expected_data[i] != flash_read_data[i]) {
+            printf("Error at word %u: expected 0x%08x, got 0x%08x\n", 
+                   i, expected_data[i], flash_read_data[i]);
             errors++;
-            break;
+        }
+    }
+
+    // Verify rest of flash_read_data is unchanged (0x00000000)
+    for (uint32_t i = len_words; i < 1024; i++) {
+        if (flash_read_data[i] != 0x00000000) {
+            printf("Error at word %u: expected 0, got 0x%08x\n", 
+                   i, flash_read_data[i]);
+            errors++;
+            break;  // Stop at first non-zero
         }
     }
 
