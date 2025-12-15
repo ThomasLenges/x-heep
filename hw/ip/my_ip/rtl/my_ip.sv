@@ -468,8 +468,8 @@ module my_ip #(
               data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) |
                   FC_RD;  // Gets the direct address
             end else begin
-              data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00fff000)) >> 8) << 8) |
-                  FC_RD;  // Gets sector start address
+              data = (((bitfield_byteswap32((reg2hw.r_address & 32'h00fff000) + (SE_BSIZE * iteration_cnt_q))) >> 8) << 8) |
+                  FC_RD;  // Gets sector start address XXX NEED TO TAKE ITERATION_CNT INTO ACCOUNT
             end
 
             if (obi_finish) begin
@@ -780,8 +780,7 @@ module my_ip #(
 
           ERASE_SE_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00fff000)) >> 8) << 8) |
-                FC_SE;  // Sector erase on the read address
+            data = (((bitfield_byteswap32((reg2hw.r_address & 32'h00fff000) + (SE_BSIZE * iteration_cnt_q))) >> 8) << 8) | FC_SE;
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -836,7 +835,7 @@ module my_ip #(
 
           MODIFY_DMA_SRC_PTR: begin
             address = DMA_START_ADDRESS + {25'b0, DMA_SRC_PTR_OFFSET};
-            data = reg2hw.md_address;
+            data = reg2hw.md_address + iteration_cnt_q * SE_BSIZE;
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -917,9 +916,13 @@ module my_ip #(
             obi_start = 1'b1;
 
             if (reg2hw.length < SE_BSIZE - sector_offset) begin
-              data = (reg2hw.length << 2);  // Number of words to transfer
+              if (reg2hw.length % 4 == 0) begin
+                data = reg2hw.length >> 2;  // Number of words to transfer
+              end else begin
+                data = (reg2hw.length >> 2) + 1;  // Number of bytes to transfer rounded to next word
+              end
             end else begin
-              data = ((SE_BSIZE - sector_offset) << 2); // Number of words to transfer remaining in sector (can be entire sector also)
+              data = ((SE_BSIZE - sector_offset) >> 2); // Number of words to transfer remaining in sector (can be entire sector also)
             end
 
 
@@ -929,14 +932,14 @@ module my_ip #(
           end
 
           MODIFY_TRANS: begin
-            hw2reg.length.de = 1'b1;
-            if (reg2hw.length < SE_BSIZE - sector_offset) begin
-              hw2reg.length.d  = 32'h0;  // Indicate that all data has been transferred in this iteration
-            end else begin
-              hw2reg.length.d  = reg2hw.length - (SE_BSIZE - sector_offset);  // Indicate remaining length to be transferred in next iterations
-            end
-
             if (dma_done[0]) begin
+              hw2reg.length.de = 1'b1;
+              if (reg2hw.length < SE_BSIZE - sector_offset) begin
+                hw2reg.length.d  = 32'h0;  // Indicate that all data has been transferred in this iteration
+              end else begin
+                hw2reg.length.d  = reg2hw.length - (SE_BSIZE - sector_offset);  // Indicate remaining length to be transferred in next iterations
+              end
+
               modify_state_d = MODIFY_IDLE;
               top_state_d = TOP_WRITE;
               write_state_d = WRITE_WE_CHECK_TX_FIFO;
@@ -1012,6 +1015,9 @@ module my_ip #(
             data = (((bitfield_byteswap32((reg2hw.r_address & 32'h00fff000) |
                                           ({28'h0, page_cnt_q} << 8))) >> 8) << 8) |
                 FC_PP;  // Program page per page in entire sector which we are currently writing to (16 pages per sector)
+            data = (((bitfield_byteswap32(((reg2hw.r_address & 32'h00fff000) + (SE_BSIZE * iteration_cnt_q)) |
+                                          ({28'h0, page_cnt_q} << 8))) >> 8) << 8) |
+               FC_PP;  // Program page in current iteration's sector
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -1165,6 +1171,7 @@ module my_ip #(
                   top_state_d   = TOP_FWAIT;
                   fwait_state_d = FWAIT_SET_RXWM_R;
                 end else begin  // REPEAT for next sector
+                  fwait_cnt_d = 2'h0;
                   page_cnt_d = 4'b0;
                   iteration_cnt_d = iteration_cnt_q + 1'h1;
                   top_state_d = TOP_READ;
