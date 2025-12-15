@@ -33,17 +33,16 @@ module my_ip #(
   my_ip_hw2reg_t hw2reg;
 
   // FLASH COMMANDS
-  localparam logic [31:0] 
-  FC_RD = 32'h03,  // Read Data
+  localparam logic [31:0] FC_RD = 32'h03,  // Read Data
   FC_RSR1 = 32'h05,  // Read Status Register 1
   FC_WE = 32'h06,  // Write Enable
   FC_SE = 32'h20,  // Sector Erase 4KB
   FC_PP = 32'h02,  // Page Program
 
   SE_WSIZE = 32'h400,  // Sector size in words
-  SE_BSIZE = 32'h1000, // Sector size in bytes
-  PAGE_WSIZE = 32'h40, // Page size in words
-  PAGE_BSIZE = 32'h100; // Page size in bytes
+  SE_BSIZE = 32'h1000,  // Sector size in bytes
+  PAGE_WSIZE = 32'h40,  // Page size in words
+  PAGE_BSIZE = 32'h100;  // Page size in bytes
 
   // OBI FSM
   enum logic [1:0] {
@@ -319,7 +318,7 @@ module my_ip #(
     modify_state_d = modify_state_q;
     write_state_d = write_state_q;
     fwait_cnt_d = fwait_cnt_q;
-    page_cnt_d  = page_cnt_q;
+    page_cnt_d = page_cnt_q;
     iteration_cnt_d = iteration_cnt_q;
 
     sector_offset = 32'h0;
@@ -386,7 +385,7 @@ module my_ip #(
 
           READ_DMA_DST_INC: begin
             address = DMA_START_ADDRESS + {25'b0, DMA_DST_PTR_INC_D1_OFFSET};
-            data = 32'h4;  
+            data = 32'h4;
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -443,7 +442,7 @@ module my_ip #(
                 data = (reg2hw.length >> 2) + 1;  // Number of bytes to transfer rounded to next word
               end
             end else begin
-              data = SE_WSIZE; // Number of words to read from flash (a 4KB sector)
+              data = SE_WSIZE;  // Number of words to read from flash (a 4KB sector)
             end
 
             if (obi_finish) begin
@@ -461,15 +460,17 @@ module my_ip #(
           end
 
           READ_SPI_FILL_TX_FIFO: begin
-            address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            w_enable = 1'b1;
+            address   = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
+            w_enable  = 1'b1;
             obi_start = 1'b1;
 
             if (reg2hw.control.rnw) begin
-              data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) | FC_RD; // Gets the direct address
+              data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) |
+                  FC_RD;  // Gets the direct address
             end else begin
-              data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00fff000)) >> 8) << 8) | FC_RD; // Gets sector start address
-            end  
+              data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00fff000)) >> 8) << 8) |
+                  FC_RD;  // Gets sector start address
+            end
 
             if (obi_finish) begin
               read_state_d = READ_SPI_WAIT_READY_1;
@@ -487,7 +488,9 @@ module my_ip #(
 
           READ_SPI_SEND_CMD_1: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_COMMAND_OFFSET};
-            data = {3'h0, 2'h2, 2'h0, 1'h1, 24'h3};  // Empty + Direction + Speed + Csaat + Length (1100 0003)
+            data = {
+              3'h0, 2'h2, 2'h0, 1'h1, 24'h3
+            };  // Empty + Direction + Speed + Csaat + Length (1100 0003)
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -506,16 +509,20 @@ module my_ip #(
           end
 
           READ_SPI_SEND_CMD_2: begin
-            address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_COMMAND_OFFSET};
-            w_enable = 1'b1;
+            address   = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_COMMAND_OFFSET};
+            w_enable  = 1'b1;
             obi_start = 1'b1;
 
-            if(reg2hw.control.rnw) begin
-              data = {3'h0, 2'h1, 2'h0, 1'h0, reg2hw.length[23:0] - 1'h1};  // Empty + Direction + Speed + Csaat + Length
+            if (reg2hw.control.rnw) begin
+              data = {
+                3'h0, 2'h1, 2'h0, 1'h0, reg2hw.length[23:0] - 1'h1
+              };  // Empty + Direction + Speed + Csaat + Length
             end else begin
-              data = {3'h0, 2'h1, 2'h0, 1'h0, SE_BSIZE[23:0] - 1'h1};  // Empty + Direction + Speed + Csaat + Length
+              data = {
+                3'h0, 2'h1, 2'h0, 1'h0, SE_BSIZE[23:0] - 1'h1
+              };  // Empty + Direction + Speed + Csaat + Length
             end
-              
+
 
             if (obi_finish) begin
               read_state_d = READ_TRANS;
@@ -563,9 +570,9 @@ module my_ip #(
                 end
 
                 2'h1: begin  // All finished (Read -> Modify -> Write) (No wait and erase)
-                  fwait_cnt_d   = 2'h0;
+                  fwait_cnt_d = 2'h0;
                   fwait_state_d = FWAIT_IDLE;
-                  top_state_d   = TOP_IDLE;
+                  top_state_d = TOP_IDLE;
                   my_ip_done_o = 1'b1;
                   hw2reg.control.start.de = 1'b1;
                   hw2reg.control.start.d = 1'b0;
@@ -680,9 +687,9 @@ module my_ip #(
                   end
 
                   2'h1: begin  // Enter write
-                    fwait_cnt_d   = 2'h2;
+                    fwait_cnt_d = 2'h2;
                     fwait_state_d = FWAIT_IDLE;
-                    top_state_d   = TOP_MODIFY;
+                    top_state_d = TOP_MODIFY;
                     modify_state_d = MODIFY_IDLE;
                   end
 
@@ -815,9 +822,9 @@ module my_ip #(
       TOP_MODIFY: begin
 
         if (iteration_cnt_d == 0) begin
-          sector_offset = reg2hw.r_address & 32'h00000fff; // Offset within sector
+          sector_offset = reg2hw.r_address & 32'h00000fff;  // Offset within sector
         end else begin
-          sector_offset = 32'h0; // Begin from start of sector for next iterations
+          sector_offset = 32'h0;  // Begin from start of sector for next iterations
         end
 
         case (modify_state_q)
@@ -895,9 +902,7 @@ module my_ip #(
 
           MODIFY_DMA_TRIG: begin
             address = DMA_START_ADDRESS + {25'b0, DMA_SLOT_OFFSET};
-            data = {
-              16'h0, 16'h0
-            };  // TX_TRG: Memory write trigger + RX_TRG: Memory read trigger
+            data = {16'h0, 16'h0};  // TX_TRG: Memory write trigger + RX_TRG: Memory read trigger
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -917,7 +922,7 @@ module my_ip #(
               data = ((SE_BSIZE - sector_offset) << 2); // Number of words to transfer remaining in sector (can be entire sector also)
             end
 
-            
+
             if (obi_finish) begin
               modify_state_d = MODIFY_TRANS;
             end
@@ -1004,7 +1009,8 @@ module my_ip #(
 
           WRITE_PP_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = (((bitfield_byteswap32((reg2hw.r_address & 32'h00fff000) | ({28'h0, page_cnt_q} << 8))) >> 8) << 8) |
+            data = (((bitfield_byteswap32((reg2hw.r_address & 32'h00fff000) |
+                                          ({28'h0, page_cnt_q} << 8))) >> 8) << 8) |
                 FC_PP;  // Program page per page in entire sector which we are currently writing to (16 pages per sector)
             w_enable = 1'b1;
             obi_start = 1'b1;
@@ -1065,7 +1071,7 @@ module my_ip #(
 
           WRITE_DMA_SRC_INC: begin
             address = DMA_START_ADDRESS + {25'b0, DMA_SRC_PTR_INC_D1_OFFSET};
-            data = 32'h4;  
+            data = 32'h4;
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -1119,9 +1125,9 @@ module my_ip #(
           end
 
           WRITE_DMA_SIZE_D1: begin
-            address   = DMA_START_ADDRESS + {25'b0, DMA_SIZE_D1_OFFSET};
+            address = DMA_START_ADDRESS + {25'b0, DMA_SIZE_D1_OFFSET};
             data = PAGE_WSIZE;
-            w_enable  = 1'b1;
+            w_enable = 1'b1;
             obi_start = 1'b1;
 
             if (obi_finish) begin
@@ -1154,12 +1160,12 @@ module my_ip #(
 
             if (obi_finish) begin
               if (page_cnt_q == 4'hf) begin
-                if (reg2hw.length == 0) begin // DONE
+                if (reg2hw.length == 0) begin  // DONE
                   write_state_d = WRITE_IDLE;
                   top_state_d   = TOP_FWAIT;
                   fwait_state_d = FWAIT_SET_RXWM_R;
-                end else begin // REPEAT for next sector
-                  page_cnt_d  = 4'b0;
+                end else begin  // REPEAT for next sector
+                  page_cnt_d = 4'b0;
                   iteration_cnt_d = iteration_cnt_q + 1'h1;
                   top_state_d = TOP_READ;
                   write_state_d = WRITE_IDLE;
@@ -1177,9 +1183,9 @@ module my_ip #(
         endcase
       end
 
-            // ========== DMA INIT FSM ==================
+      // ========== DMA INIT FSM ==================
       TOP_DMA_INIT: begin
-        case(dma_init_state_q)
+        case (dma_init_state_q)
           DMA_INIT_IDLE: begin
             address   = DMA_START_ADDRESS + {25'b0, DMA_STATUS_OFFSET};
             obi_start = 1'b1;
@@ -1445,7 +1451,7 @@ module my_ip #(
 
           DMA_INIT_REDIRECT: begin
             dma_init_state_d = DMA_INIT_IDLE;
-            case(dma_init_return_q)
+            case (dma_init_return_q)
               RETURN_READ: begin
                 top_state_d = TOP_READ;
               end

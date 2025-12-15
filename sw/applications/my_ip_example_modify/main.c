@@ -66,7 +66,7 @@ uint32_t *rr_address = flash_read_data;
 
 
 // Check function
-uint32_t check_result(uint8_t *test_buffer, uint32_t len);
+uint32_t check_modify(uint32_t *test_buffer, uint32_t len);
 
 __attribute__((optimize("O0"))) void my_ip_wflash(){
     // Gives the address offset how where the test_buffer is stored in the flash
