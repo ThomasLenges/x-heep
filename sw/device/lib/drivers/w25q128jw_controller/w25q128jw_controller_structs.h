@@ -4,8 +4,8 @@
 **                            *******************                          **
 **                                                                         **
 ** project  : x-heep                                                       **
-** filename : my_ip_structs.h                                 **
-** date     : 02/12/2025                                                      **
+** filename : w25q128jw_controller_structs.h                                 **
+** date     : 17/12/2025                                                      **
 **                                                                         **
 *****************************************************************************
 **                                                                         **
@@ -15,8 +15,8 @@
 */
 
 /**
-* @file   my_ip_structs.h
-* @date   02/12/2025
+* @file   w25q128jw_controller_structs.h
+* @date   17/12/2025
 * @brief  Contains structs for every register
 *
 * This file contains the structs of the registes of the peripheral.
@@ -25,8 +25,8 @@
 * 
 */
 
-#ifndef _MY_IP_STRUCTS_H
-#define MY_IP_STRUCTS
+#ifndef _W25Q128JW_CONTROLLER_STRUCTS_H
+#define W25Q128JW_CONTROLLER_STRUCTS
 
 /****************************************************************************/
 /**                                                                        **/
@@ -43,7 +43,7 @@
 /**                                                                        **/
 /****************************************************************************/
 
-#define my_ip_peri ((volatile my_ip *) MY_IP_START_ADDRESS)
+#define w25q128jw_controller_peri ((volatile w25q128jw_controller *) W25Q128JW_CONTROLLER_START_ADDRESS)
 
 /****************************************************************************/
 /**                                                                        **/
@@ -73,7 +73,7 @@ typedef struct {
 
   uint32_t LENGTH;                                /*!< Length of data to W/R*/
 
-} my_ip;
+} w25q128jw_controller;
 
 /****************************************************************************/
 /**                                                                        **/
@@ -81,11 +81,11 @@ typedef struct {
 /**                                                                        **/
 /****************************************************************************/
 
-#ifndef _MY_IP_STRUCTS_C_SRC
+#ifndef _W25Q128JW_CONTROLLER_STRUCTS_C_SRC
 
 
 
-#endif  /* _MY_IP_STRUCTS_C_SRC */
+#endif  /* _W25Q128JW_CONTROLLER_STRUCTS_C_SRC */
 
 /****************************************************************************/
 /**                                                                        **/
@@ -102,7 +102,7 @@ typedef struct {
 
 
 
-#endif /* _MY_IP_STRUCTS_H */
+#endif /* _W25Q128JW_CONTROLLER_STRUCTS_H */
 /****************************************************************************/
 /**                                                                        **/
 /**                                EOF                                     **/

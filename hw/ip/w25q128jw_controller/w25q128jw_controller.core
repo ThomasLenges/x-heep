@@ -1,6 +1,6 @@
 CAPI=2:
 
-name: "x-heep:ip:my_ip"
+name: "x-heep:ip:w25q128jw_controller"
 description: "digital level crossing block"
 
 # Copyright 2024 EPFL
@@ -14,9 +14,9 @@ filesets:
       - x-heep::packages
       - lowrisc:ip:spi_host:1.0
     files:
-    - rtl/my_ip_reg_pkg.sv
-    - rtl/my_ip_reg_top.sv
-    - rtl/my_ip.sv
+    - rtl/w25q128jw_controller_reg_pkg.sv
+    - rtl/w25q128jw_controller_reg_top.sv
+    - rtl/w25q128jw_controller.sv
     file_type: systemVerilogSource
 
 targets:

@@ -1,4 +1,4 @@
-{ name: "my_ip"
+{ name: "w25q128jw_controller"
   clock_primary: "clk_i"
   bus_interfaces: [
     { protocol: "reg_iface", direction: "device" }
@@ -63,7 +63,7 @@
   ]
 
   interrupt_list: [
-    { name: "my_ip_event"
+    { name: "w25q128jw_controller_event"
       desc: "Event-related interrupts."
     }
   ]

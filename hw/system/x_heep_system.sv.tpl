@@ -74,7 +74,7 @@ module x_heep_system
     input logic [core_v_mini_mcu_pkg::DMA_CH_NUM-1:0] ext_dma_stop_i,
     input logic [core_v_mini_mcu_pkg::DMA_CH_NUM-1:0] hw_fifo_done_i,
 
-    output logic my_ip_done_o,
+    output logic w25q128jw_controller_done_o,
 
     // eXtension interface
     if_xif.cpu_compressed xif_compressed_if,

@@ -1,0 +1,52 @@
+// Generated register defines for w25q128jw_controller
+
+#ifndef _W25Q128JW_CONTROLLER_REG_DEFS_
+#define _W25Q128JW_CONTROLLER_REG_DEFS_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+// Register width
+#define W25Q128JW_CONTROLLER_PARAM_REG_WIDTH 32
+
+// Common Interrupt Offsets
+#define W25Q128JW_CONTROLLER_INTR_COMMON_W25Q128JW_CONTROLLER_EVENT_BIT 0
+
+// Interrupt State Register
+#define W25Q128JW_CONTROLLER_INTR_STATE_REG_OFFSET 0x0
+#define W25Q128JW_CONTROLLER_INTR_STATE_W25Q128JW_CONTROLLER_EVENT_BIT 0
+
+// Interrupt Enable Register
+#define W25Q128JW_CONTROLLER_INTR_ENABLE_REG_OFFSET 0x4
+#define W25Q128JW_CONTROLLER_INTR_ENABLE_W25Q128JW_CONTROLLER_EVENT_BIT 0
+
+// Interrupt Test Register
+#define W25Q128JW_CONTROLLER_INTR_TEST_REG_OFFSET 0x8
+#define W25Q128JW_CONTROLLER_INTR_TEST_W25Q128JW_CONTROLLER_EVENT_BIT 0
+
+// Control register for flash controller
+#define W25Q128JW_CONTROLLER_CONTROL_REG_OFFSET 0xc
+#define W25Q128JW_CONTROLLER_CONTROL_START_BIT 0
+#define W25Q128JW_CONTROLLER_CONTROL_RNW_BIT 1
+
+// Status register for flash controller
+#define W25Q128JW_CONTROLLER_STATUS_REG_OFFSET 0x10
+#define W25Q128JW_CONTROLLER_STATUS_READY_BIT 0
+
+// Address in Flash to read from/write to
+#define W25Q128JW_CONTROLLER_R_ADDRESS_REG_OFFSET 0x14
+
+// Address to store read data from SPI_FLASH
+#define W25Q128JW_CONTROLLER_S_ADDRESS_REG_OFFSET 0x18
+
+// Address where data with which we have to modify the flash is
+#define W25Q128JW_CONTROLLER_MD_ADDRESS_REG_OFFSET 0x1c
+
+// Length of data to W/R
+#define W25Q128JW_CONTROLLER_LENGTH_REG_OFFSET 0x20
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
+#endif  // _W25Q128JW_CONTROLLER_REG_DEFS_
+// End generated register defines for w25q128jw_controller

@@ -21,8 +21,8 @@
 [treeopen] TOP.testharness.x_heep_system_i.core_v_mini_mcu_i.ao_peripheral_subsystem_i.spi_subsystem_i.
 [treeopen] TOP.testharness.x_heep_system_i.core_v_mini_mcu_i.ao_peripheral_subsystem_i.spi_subsystem_i.ot_spi_i.
 [treeopen] TOP.testharness.x_heep_system_i.core_v_mini_mcu_i.peripheral_subsystem_i.
-[treeopen] TOP.testharness.x_heep_system_i.core_v_mini_mcu_i.peripheral_subsystem_i.my_ip_i.
-[treeopen] TOP.testharness.x_heep_system_i.core_v_mini_mcu_i.peripheral_subsystem_i.my_ip_i.reg2hw.
+[treeopen] TOP.testharness.x_heep_system_i.core_v_mini_mcu_i.peripheral_subsystem_i.w25q128jw_controller_i.
+[treeopen] TOP.testharness.x_heep_system_i.core_v_mini_mcu_i.peripheral_subsystem_i.w25q128jw_controller_i.reg2hw.
 [sst_width] 623
 [signals_width] 256
 [sst_expanded] 1

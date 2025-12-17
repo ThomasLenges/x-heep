@@ -153,11 +153,11 @@
             length:  0x00010000
             is_included: "yes"
         }
-        my_ip: {
+        w25q128jw_controller: {
             offset:  0x00090000
             length:  0x00010000
             is_included: "yes"
-            path:    "./hw/ip/my_ip/data/my_ip.hjson"
+            path:    "./hw/ip/w25q128jw_controller/data/w25q128jw_controller.hjson"
         }
 
     }
@@ -227,7 +227,7 @@
             intr_host_timeout:       48
             spi2_intr_event:         49
             i2s_intr_event:          50
-            my_ip_intr_event:        51
+            w25q128jw_controller_intr_event:        51
         }
     }
 }

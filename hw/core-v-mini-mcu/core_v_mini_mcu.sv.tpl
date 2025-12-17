@@ -80,7 +80,7 @@ ${pad.core_v_mini_mcu_interface}
     output logic  [EXT_HARTS_RND-1:0] ext_debug_req_o,
     output logic  ext_debug_reset_no,
 
-    output logic my_ip_done_o,
+    output logic w25q128jw_controller_done_o,
 
     // PLIC external interrupts
     input logic [NEXT_INT_RND-1:0] intr_vector_ext_i,
@@ -150,9 +150,9 @@ ${pad.core_v_mini_mcu_interface}
   obi_req_t [core_v_mini_mcu_pkg::NUM_BANKS-1:0] ram_slave_req;
   obi_resp_t [core_v_mini_mcu_pkg::NUM_BANKS-1:0] ram_slave_resp;
 
-  // MY IP signals
-  obi_req_t  my_ip_master_bus_req_i;
-  obi_resp_t my_ip_master_bus_resp_o;
+  // w25q128jw controller signals
+  obi_req_t  w25q128jw_controller_master_bus_req_i;
+  obi_resp_t w25q128jw_controller_master_bus_resp_o;
 
   // debug signals
   obi_req_t debug_slave_req;
@@ -380,8 +380,8 @@ ${pad.core_v_mini_mcu_interface}
       .ext_dma_write_resp_i(ext_dma_write_resp_i),
       .ext_dma_addr_req_o(ext_dma_addr_req_o),
       .ext_dma_addr_resp_i(ext_dma_addr_resp_i),
-      .my_ip_master_bus_req_i(my_ip_master_bus_req_i),
-      .my_ip_master_bus_resp_o(my_ip_master_bus_resp_o)
+      .w25q128jw_controller_master_bus_req_i(w25q128jw_controller_master_bus_req_i),
+      .w25q128jw_controller_master_bus_resp_o(w25q128jw_controller_master_bus_resp_o)
   );
 
   memory_subsystem #(
@@ -516,9 +516,9 @@ ${pad.core_v_mini_mcu_interface}
       .i2s_rx_valid_o(i2s_rx_valid),
       .uart_rx_i,
       .uart_tx_o,
-      .my_ip_done_o(my_ip_done_o),
-      .my_ip_master_bus_req_o(my_ip_master_bus_req_i),
-      .my_ip_master_bus_resp_i(my_ip_master_bus_resp_o),
+      .w25q128jw_controller_done_o(w25q128jw_controller_done_o),
+      .w25q128jw_controller_master_bus_req_o(w25q128jw_controller_master_bus_req_i),
+      .w25q128jw_controller_master_bus_resp_i(w25q128jw_controller_master_bus_resp_o),
       .dma_done(dma_done_o)
   );
 

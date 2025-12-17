@@ -329,7 +329,7 @@ module core_v_mini_mcu
     output logic [EXT_HARTS_RND-1:0] ext_debug_req_o,
     output logic ext_debug_reset_no,
 
-    output logic my_ip_done_o,
+    output logic w25q128jw_controller_done_o,
 
     // PLIC external interrupts
     input logic [NEXT_INT_RND-1:0] intr_vector_ext_i,
@@ -397,9 +397,9 @@ module core_v_mini_mcu
   obi_req_t [core_v_mini_mcu_pkg::NUM_BANKS-1:0] ram_slave_req;
   obi_resp_t [core_v_mini_mcu_pkg::NUM_BANKS-1:0] ram_slave_resp;
 
-  // MY IP signals
-  obi_req_t my_ip_master_bus_req_i;
-  obi_resp_t my_ip_master_bus_resp_o;
+  // w25q128jw controller signals
+  obi_req_t w25q128jw_controller_master_bus_req_i;
+  obi_resp_t w25q128jw_controller_master_bus_resp_o;
 
   // debug signals
   obi_req_t debug_slave_req;
@@ -487,24 +487,6 @@ module core_v_mini_mcu
   assign memory_subsystem_banks_powergate_iso_n[1] = memory_subsystem_pwr_ctrl_out[1].isogate_en_n;
   assign memory_subsystem_banks_set_retentive_n[1] = memory_subsystem_pwr_ctrl_out[1].retentive_en_n;
   assign memory_subsystem_clkgate_en_n[1] = memory_subsystem_pwr_ctrl_out[1].clkgate_en_n;
-  assign memory_subsystem_banks_powergate_switch_n[2] = memory_subsystem_pwr_ctrl_out[2].pwrgate_en_n;
-  assign memory_subsystem_pwr_ctrl_in[2].pwrgate_ack_n = memory_subsystem_banks_powergate_switch_ack_n[2];
-  //isogate exposed outside for UPF sim flow and switch cells
-  assign memory_subsystem_banks_powergate_iso_n[2] = memory_subsystem_pwr_ctrl_out[2].isogate_en_n;
-  assign memory_subsystem_banks_set_retentive_n[2] = memory_subsystem_pwr_ctrl_out[2].retentive_en_n;
-  assign memory_subsystem_clkgate_en_n[2] = memory_subsystem_pwr_ctrl_out[2].clkgate_en_n;
-  assign memory_subsystem_banks_powergate_switch_n[3] = memory_subsystem_pwr_ctrl_out[3].pwrgate_en_n;
-  assign memory_subsystem_pwr_ctrl_in[3].pwrgate_ack_n = memory_subsystem_banks_powergate_switch_ack_n[3];
-  //isogate exposed outside for UPF sim flow and switch cells
-  assign memory_subsystem_banks_powergate_iso_n[3] = memory_subsystem_pwr_ctrl_out[3].isogate_en_n;
-  assign memory_subsystem_banks_set_retentive_n[3] = memory_subsystem_pwr_ctrl_out[3].retentive_en_n;
-  assign memory_subsystem_clkgate_en_n[3] = memory_subsystem_pwr_ctrl_out[3].clkgate_en_n;
-  assign memory_subsystem_banks_powergate_switch_n[4] = memory_subsystem_pwr_ctrl_out[4].pwrgate_en_n;
-  assign memory_subsystem_pwr_ctrl_in[4].pwrgate_ack_n = memory_subsystem_banks_powergate_switch_ack_n[4];
-  //isogate exposed outside for UPF sim flow and switch cells
-  assign memory_subsystem_banks_powergate_iso_n[4] = memory_subsystem_pwr_ctrl_out[4].isogate_en_n;
-  assign memory_subsystem_banks_set_retentive_n[4] = memory_subsystem_pwr_ctrl_out[4].retentive_en_n;
-  assign memory_subsystem_clkgate_en_n[4] = memory_subsystem_pwr_ctrl_out[4].clkgate_en_n;
 
   for (genvar i = 0; i < EXT_DOMAINS_RND; i = i + 1) begin : gen_external_subsystem_pwr_gating
     assign external_subsystem_powergate_switch_no[i]        = external_subsystem_pwr_ctrl_out[i].pwrgate_en_n;
@@ -647,8 +629,8 @@ module core_v_mini_mcu
       .ext_dma_write_resp_i(ext_dma_write_resp_i),
       .ext_dma_addr_req_o(ext_dma_addr_req_o),
       .ext_dma_addr_resp_i(ext_dma_addr_resp_i),
-      .my_ip_master_bus_req_i(my_ip_master_bus_req_i),
-      .my_ip_master_bus_resp_o(my_ip_master_bus_resp_o)
+      .w25q128jw_controller_master_bus_req_i(w25q128jw_controller_master_bus_req_i),
+      .w25q128jw_controller_master_bus_resp_o(w25q128jw_controller_master_bus_resp_o)
   );
 
   memory_subsystem #(
@@ -785,9 +767,9 @@ module core_v_mini_mcu
       .i2s_rx_valid_o(i2s_rx_valid),
       .uart_rx_i,
       .uart_tx_o,
-      .my_ip_done_o(my_ip_done_o),
-      .my_ip_master_bus_req_o(my_ip_master_bus_req_i),
-      .my_ip_master_bus_resp_i(my_ip_master_bus_resp_o),
+      .w25q128jw_controller_done_o(w25q128jw_controller_done_o),
+      .w25q128jw_controller_master_bus_req_o(w25q128jw_controller_master_bus_req_i),
+      .w25q128jw_controller_master_bus_resp_i(w25q128jw_controller_master_bus_resp_o),
       .dma_done(dma_done_o)
   );
 

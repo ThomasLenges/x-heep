@@ -7,7 +7,7 @@
 
 `include "common_cells/assertions.svh"
 
-module my_ip_reg_top #(
+module w25q128jw_controller_reg_top #(
     parameter type reg_req_t = logic,
     parameter type reg_rsp_t = logic,
     parameter int AW = 6
@@ -17,15 +17,15 @@ module my_ip_reg_top #(
     input reg_req_t reg_req_i,
     output reg_rsp_t reg_rsp_o,
     // To HW
-    output my_ip_reg_pkg::my_ip_reg2hw_t reg2hw,  // Write
-    input my_ip_reg_pkg::my_ip_hw2reg_t hw2reg,  // Read
+    output w25q128jw_controller_reg_pkg::w25q128jw_controller_reg2hw_t reg2hw,  // Write
+    input w25q128jw_controller_reg_pkg::w25q128jw_controller_hw2reg_t hw2reg,  // Read
 
 
     // Config
     input devmode_i  // If 1, explicit error return for unmapped register access
 );
 
-  import my_ip_reg_pkg::*;
+  import w25q128jw_controller_reg_pkg::*;
 
   localparam int DW = 32;
   localparam int DBW = DW / 8;  // Byte Width
@@ -363,15 +363,15 @@ module my_ip_reg_top #(
   logic [8:0] addr_hit;
   always_comb begin
     addr_hit = '0;
-    addr_hit[0] = (reg_addr == MY_IP_INTR_STATE_OFFSET);
-    addr_hit[1] = (reg_addr == MY_IP_INTR_ENABLE_OFFSET);
-    addr_hit[2] = (reg_addr == MY_IP_INTR_TEST_OFFSET);
-    addr_hit[3] = (reg_addr == MY_IP_CONTROL_OFFSET);
-    addr_hit[4] = (reg_addr == MY_IP_STATUS_OFFSET);
-    addr_hit[5] = (reg_addr == MY_IP_R_ADDRESS_OFFSET);
-    addr_hit[6] = (reg_addr == MY_IP_S_ADDRESS_OFFSET);
-    addr_hit[7] = (reg_addr == MY_IP_MD_ADDRESS_OFFSET);
-    addr_hit[8] = (reg_addr == MY_IP_LENGTH_OFFSET);
+    addr_hit[0] = (reg_addr == W25Q128JW_CONTROLLER_INTR_STATE_OFFSET);
+    addr_hit[1] = (reg_addr == W25Q128JW_CONTROLLER_INTR_ENABLE_OFFSET);
+    addr_hit[2] = (reg_addr == W25Q128JW_CONTROLLER_INTR_TEST_OFFSET);
+    addr_hit[3] = (reg_addr == W25Q128JW_CONTROLLER_CONTROL_OFFSET);
+    addr_hit[4] = (reg_addr == W25Q128JW_CONTROLLER_STATUS_OFFSET);
+    addr_hit[5] = (reg_addr == W25Q128JW_CONTROLLER_R_ADDRESS_OFFSET);
+    addr_hit[6] = (reg_addr == W25Q128JW_CONTROLLER_S_ADDRESS_OFFSET);
+    addr_hit[7] = (reg_addr == W25Q128JW_CONTROLLER_MD_ADDRESS_OFFSET);
+    addr_hit[8] = (reg_addr == W25Q128JW_CONTROLLER_LENGTH_OFFSET);
   end
 
   assign addrmiss = (reg_re || reg_we) ? ~|addr_hit : 1'b0;
@@ -379,15 +379,15 @@ module my_ip_reg_top #(
   // Check sub-word write is permitted
   always_comb begin
     wr_err = (reg_we &
-              ((addr_hit[0] & (|(MY_IP_PERMIT[0] & ~reg_be))) |
-               (addr_hit[1] & (|(MY_IP_PERMIT[1] & ~reg_be))) |
-               (addr_hit[2] & (|(MY_IP_PERMIT[2] & ~reg_be))) |
-               (addr_hit[3] & (|(MY_IP_PERMIT[3] & ~reg_be))) |
-               (addr_hit[4] & (|(MY_IP_PERMIT[4] & ~reg_be))) |
-               (addr_hit[5] & (|(MY_IP_PERMIT[5] & ~reg_be))) |
-               (addr_hit[6] & (|(MY_IP_PERMIT[6] & ~reg_be))) |
-               (addr_hit[7] & (|(MY_IP_PERMIT[7] & ~reg_be))) |
-               (addr_hit[8] & (|(MY_IP_PERMIT[8] & ~reg_be)))));
+              ((addr_hit[0] & (|(W25Q128JW_CONTROLLER_PERMIT[0] & ~reg_be))) |
+               (addr_hit[1] & (|(W25Q128JW_CONTROLLER_PERMIT[1] & ~reg_be))) |
+               (addr_hit[2] & (|(W25Q128JW_CONTROLLER_PERMIT[2] & ~reg_be))) |
+               (addr_hit[3] & (|(W25Q128JW_CONTROLLER_PERMIT[3] & ~reg_be))) |
+               (addr_hit[4] & (|(W25Q128JW_CONTROLLER_PERMIT[4] & ~reg_be))) |
+               (addr_hit[5] & (|(W25Q128JW_CONTROLLER_PERMIT[5] & ~reg_be))) |
+               (addr_hit[6] & (|(W25Q128JW_CONTROLLER_PERMIT[6] & ~reg_be))) |
+               (addr_hit[7] & (|(W25Q128JW_CONTROLLER_PERMIT[7] & ~reg_be))) |
+               (addr_hit[8] & (|(W25Q128JW_CONTROLLER_PERMIT[8] & ~reg_be)))));
   end
 
   assign intr_state_we = addr_hit[0] & reg_we & !reg_error;
@@ -481,7 +481,7 @@ module my_ip_reg_top #(
 
 endmodule
 
-module my_ip_reg_top_intf #(
+module w25q128jw_controller_reg_top_intf #(
     parameter  int AW = 6,
     localparam int DW = 32
 ) (
@@ -489,8 +489,8 @@ module my_ip_reg_top_intf #(
     input logic rst_ni,
     REG_BUS.in regbus_slave,
     // To HW
-    output my_ip_reg_pkg::my_ip_reg2hw_t reg2hw,  // Write
-    input my_ip_reg_pkg::my_ip_hw2reg_t hw2reg,  // Read
+    output w25q128jw_controller_reg_pkg::w25q128jw_controller_reg2hw_t reg2hw,  // Write
+    input w25q128jw_controller_reg_pkg::w25q128jw_controller_hw2reg_t hw2reg,  // Read
     // Config
     input devmode_i  // If 1, explicit error return for unmapped register access
 );
@@ -514,7 +514,7 @@ module my_ip_reg_top_intf #(
 
 
 
-  my_ip_reg_top #(
+  w25q128jw_controller_reg_top #(
       .reg_req_t(reg_bus_req_t),
       .reg_rsp_t(reg_bus_rsp_t),
       .AW(AW)

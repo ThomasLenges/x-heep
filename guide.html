@@ -61,7 +61,7 @@ conda activate core-v-mini-mcu</code></pre>
   <div class="section">
     <h2>4️⃣ Build Software</h2>
     <p>Still in <code>/x-heep</code> root, choose the right project and linker:</p>
-    <pre><code>make app PROJECT=my_ip_example LINKER=flash_load
+    <pre><code>make app PROJECT=w25q128jw_controller_example LINKER=flash_load
 # Or use LINKER=on_chip / flash_exec as needed
 </code></pre>
   </div>
@@ -140,7 +140,7 @@ git pull origin work
   <div class="section">
     <h2>8️⃣ Packages</h2>
     <p>Find <code>core-v-mini-mcu</code> package at: <code>hw/core-v-mini-mcu/include/</code></p>
-    <p>Find <code>my_ip</code> package at: <code>hw/ip/my_ip/rtl/my_ip_reg_pkg.sv</code></p>
+    <p>Find <code>w25q128jw_controller</code> package at: <code>hw/ip/w25q128jw_controller/rtl/w25q128jw_controller_reg_pkg.sv</code></p>
     <p>Find <code>spi_host</code> in <code>hw/vendor/lowrisc_opentitan_spi_host</code> and its pkg in <code>rtl/spi_host_reg_pkg.sv</code></p>
     <p>Don't forget to cast offsets for registers (all registers are 32-bit).</p>
   </div>
@@ -154,9 +154,9 @@ gtkwave waveform.fst &
 
     <p>To inspect waveforms after simulation, open the generated <code>.vcd</code> or <code>.fst</code> file in GTKwave.</p>
     <p>Signals of interest are located under the following hierarchy:</p>
-    <pre><code>testharness → x_heep_system_i → core_v_mini_mcu_i → peripheral_subsystem_i → my_ip_i</code></pre>
+    <pre><code>testharness → x_heep_system_i → core_v_mini_mcu_i → peripheral_subsystem_i → w25q128jw_controller_i</code></pre>
     <pre><code>testharness → x_heep_system_i → core_v_mini_mcu_i → ao_peripheral_subsystem-i → spi_subsystem_i → ot_spi_i </code></pre>
-    <p>Inside this path, you can expand <code>my_ip</code> to find internal registers, control signals, and bus transactions.</p>
+    <p>Inside this path, you can expand <code>w25q128jw_controller</code> to find internal registers, control signals, and bus transactions.</p>
     <p>To save your current signal setup for later use:</p>
     <ul>
       <li>Select or highlight the desired signals in the GTKwave interface.</li>

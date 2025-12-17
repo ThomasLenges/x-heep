@@ -88,9 +88,9 @@ module peripheral_subsystem
     input  logic pdm2pcm_pdm_i,
 
     // My IP signals
-    output logic     my_ip_done_o,
-    output obi_req_t my_ip_master_bus_req_o,
-    input  obi_resp_t my_ip_master_bus_resp_i,
+    output logic     w25q128jw_controller_done_o,
+    output obi_req_t w25q128jw_controller_master_bus_req_o,
+    input  obi_resp_t w25q128jw_controller_master_bus_resp_i,
     input  logic [core_v_mini_mcu_pkg::DMA_CH_NUM-1:0] dma_done
 );
 
@@ -153,7 +153,7 @@ module peripheral_subsystem
   logic uart_intr_rx_timeout;
   logic uart_intr_rx_parity_err;
   
-  logic my_ip_intr_event;
+  logic w25q128jw_controller_intr_event;
 
   // this avoids lint errors
   assign unused_irq_id = irq_id;
@@ -187,7 +187,7 @@ module peripheral_subsystem
   assign intr_vector[${interrupts["intr_host_timeout"]}] = i2c_intr_host_timeout;
   assign intr_vector[${interrupts["spi2_intr_event"]}] = spi2_intr_event;
   assign intr_vector[${interrupts["i2s_intr_event"]}] = i2s_intr_event;
-  assign intr_vector[${interrupts["my_ip_intr_event"]}] = my_ip_intr_event;
+  assign intr_vector[${interrupts["w25q128jw_controller_intr_event"]}] = w25q128jw_controller_intr_event;
 
   // External interrupts assignement
   for (genvar i = 0; i < NEXT_INT; i++) begin : gen_external_intr_vect
@@ -635,26 +635,26 @@ module peripheral_subsystem
   assign peripheral_slv_rsp = '0;
 % endif
 
-my_ip #(
+w25q128jw_controller #(
       .reg_req_t(reg_pkg::reg_req_t),
       .reg_rsp_t(reg_pkg::reg_rsp_t)
-  ) my_ip_i (
+  ) w25q128jw_controller_i (
       .clk_i(clk_cg),
       .rst_ni,
 
       // Register interface
-      .reg_req_i(peripheral_slv_req[core_v_mini_mcu_pkg::MY_IP_IDX]),
-      .reg_rsp_o(peripheral_slv_rsp[core_v_mini_mcu_pkg::MY_IP_IDX]),
+      .reg_req_i(peripheral_slv_req[core_v_mini_mcu_pkg::W25Q128JW_CONTROLLER_IDX]),
+      .reg_rsp_o(peripheral_slv_rsp[core_v_mini_mcu_pkg::W25Q128JW_CONTROLLER_IDX]),
 
       // Done signal
-      .my_ip_done_o,
+      .w25q128jw_controller_done_o,
 
       // Interrupt signal
-      .my_ip_interrupt_o(my_ip_intr_event),
+      .w25q128jw_controller_interrupt_o(w25q128jw_controller_intr_event),
 
       // Master ports on the system bus
-      .my_ip_master_bus_req_o,
-      .my_ip_master_bus_resp_i,
+      .w25q128jw_controller_master_bus_req_o,
+      .w25q128jw_controller_master_bus_resp_i,
       .dma_done
   );
 
