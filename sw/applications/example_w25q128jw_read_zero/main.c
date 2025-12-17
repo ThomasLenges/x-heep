@@ -6,8 +6,8 @@
 #include "x-heep.h"
 #include "w25q128jw.h"
 
-#include "w25q128jw_controller.c"
-#include "flash_data.c"
+#include "w25q128jw_controller.h"
+#include "flash_data.h"
 
 #define LENGTH_BYTES 0 // Adapt flash_data.c accordingly (max 128 bytes for this example)
 #define LENGTH_WORDS ((LENGTH_BYTES + 3) / 4) // To deal with non-multiple of 4 bytes

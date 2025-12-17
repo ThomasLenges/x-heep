@@ -33,8 +33,7 @@ module w25q128jw_controller #(
   w25q128jw_controller_hw2reg_t hw2reg;
 
   // FLASH COMMANDS
-  localparam logic [31:0] 
-  FC_RD = 32'h03,  // Read Data
+  localparam logic [31:0] FC_RD = 32'h03,  // Read Data
   FC_RSR1 = 32'h05,  // Read Status Register 1
   FC_WE = 32'h06,  // Write Enable
   FC_SE = 32'h20,  // Sector Erase 4KB
@@ -455,7 +454,7 @@ module w25q128jw_controller #(
                 data = (reg2hw.length >> 2) + 1;  // Number of bytes to transfer rounded to next word
               end
             end else begin
-              data = SE_WSIZE;  
+              data = SE_WSIZE;
             end
 
             if (obi_finish) begin
@@ -478,12 +477,10 @@ module w25q128jw_controller #(
             obi_start = 1'b1;
 
             if (reg2hw.control.rnw) begin
-              data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) |
-                  FC_RD;  
+              data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) | FC_RD;
             end else begin
               data = (((bitfield_byteswap32((reg2hw.r_address & 32'h00fff000) +
-                                            (SE_BSIZE * sector_cnt_q))) >> 8) << 8) |
-                  FC_RD;  
+                                            (SE_BSIZE * sector_cnt_q))) >> 8) << 8) | FC_RD;
             end
 
             if (obi_finish) begin
@@ -502,9 +499,7 @@ module w25q128jw_controller #(
 
           READ_SPI_SEND_CMD_1: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_COMMAND_OFFSET};
-            data = {
-              3'h0, 2'h2, 2'h0, 1'h1, 24'h3
-            };  // Empty + Direction + Speed + Csaat + Length 
+            data = {3'h0, 2'h2, 2'h0, 1'h1, 24'h3};  // Empty + Direction + Speed + Csaat + Length 
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -544,7 +539,7 @@ module w25q128jw_controller #(
           end
 
           READ_TRANS: begin
-            if (dma_done[0]) begin  
+            if (dma_done[0]) begin
               if (reg2hw.control.rnw) begin
                 read_state_d                = READ_IDLE;
                 top_state_d                 = TOP_IDLE;
@@ -627,7 +622,7 @@ module w25q128jw_controller #(
 
           FWAIT_SPI_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = FC_RSR1;  
+            data = FC_RSR1;
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -753,7 +748,7 @@ module w25q128jw_controller #(
 
           ERASE_WE_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = FC_WE;  
+            data = FC_WE;
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -1153,7 +1148,7 @@ module w25q128jw_controller #(
           end
 
           WRITE_TRANS: begin
-            if (dma_done[0]) begin 
+            if (dma_done[0]) begin
               write_state_d = WRITE_PP_WAIT_READY_2;
             end
           end
@@ -1208,7 +1203,7 @@ module w25q128jw_controller #(
             address   = DMA_START_ADDRESS + {25'b0, DMA_STATUS_OFFSET};
             obi_start = 1'b1;
 
-            if (obi_finish && read_value[0]) begin 
+            if (obi_finish && read_value[0]) begin
               dma_init_state_d = DMA_INIT_SRC_PTR;
             end
           end

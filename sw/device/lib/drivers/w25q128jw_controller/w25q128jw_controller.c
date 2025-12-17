@@ -1,5 +1,8 @@
 #include "w25q128jw_controller_structs.h"
 #include "w25q128jw_controller_regs.h"
+#include "w25q128jw_controller.h"
+
+#include "dma.h" // To use write_register function
 
 
 // ============== POLLING  ==============
@@ -18,7 +21,11 @@ __attribute__((optimize("O0"))) uint32_t w25q128jw_controller_is_ready_intr()
 
 
 // ============== OPERATION  ==============
-__attribute__((optimize("O0"))) void w25q128jw_controller_rnw(rnw, length_bytes, flash_address, ram_buffer, ram_w_new_data){
+__attribute__((optimize("O0"))) void w25q128jw_controller_rnw(uint32_t rnw,
+                                                            uint32_t length_bytes,
+                                                            uint32_t flash_address,
+                                                            uint32_t *ram_buffer,
+                                                            uint32_t *ram_w_new_data) {
     // Send flash address to controller
     write_register( (uint32_t)flash_address,
                     W25Q128JW_CONTROLLER_R_ADDRESS_REG_OFFSET,

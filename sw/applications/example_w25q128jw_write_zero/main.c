@@ -6,8 +6,8 @@
 #include "x-heep.h"
 #include "w25q128jw.h"
 
-#include "w25q128jw_controller.c"
-#include "ram_new_data.c"
+#include "w25q128jw_controller.h"
+#include "ram_new_data.h"
 
 
 // RAM buffer of size of a sector
@@ -56,7 +56,7 @@ int main(void) {
 }
 
 
-uint32_t check_write(uint8_t *expected_data, uint32_t len) {
+uint32_t check_result(uint8_t *expected_data, uint32_t len) {
     uint32_t errors = 0;
     uint8_t *ram_buffer_char = (uint8_t *)ram_buffer;
 
