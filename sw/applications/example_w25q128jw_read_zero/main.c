@@ -9,7 +9,7 @@
 #include "w25q128jw_controller.c"
 #include "flash_data.c"
 
-#define LENGTH_BYTES 128 // Adapt flash_data.c accordingly (max 128 bytes for this example)
+#define LENGTH_BYTES 0 // Adapt flash_data.c accordingly (max 128 bytes for this example)
 #define LENGTH_WORDS ((LENGTH_BYTES + 3) / 4) // To deal with non-multiple of 4 bytes
 
 // RAM buffer to store data read from FLASH

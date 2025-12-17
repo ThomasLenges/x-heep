@@ -1,9 +1,6 @@
 #include "w25q128jw_controller_structs.h"
 #include "w25q128jw_controller_regs.h"
-#include "rv_plic.h"
-#include "rv_plic_regs.h"
-#include "csr.h"
-#include "handler.h"
+
 
 // ============== POLLING  ==============
 __attribute__((optimize("O0"))) uint32_t w25q128jw_controller_is_ready_polling()
