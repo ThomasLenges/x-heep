@@ -5,7 +5,7 @@
 **                                                                         **
 ** project  : x-heep                                                       **
 ** filename : w25q128jw_controller_structs.h                                 **
-** date     : 17/12/2025                                                      **
+** date     : 18/12/2025                                                      **
 **                                                                         **
 *****************************************************************************
 **                                                                         **
@@ -16,7 +16,7 @@
 
 /**
 * @file   w25q128jw_controller_structs.h
-* @date   17/12/2025
+* @date   18/12/2025
 * @brief  Contains structs for every register
 *
 * This file contains the structs of the registes of the peripheral.
@@ -55,12 +55,6 @@
 
 typedef struct {
 
-  uint32_t INTR_STATE;                            /*!< Interrupt State Register*/
-
-  uint32_t INTR_ENABLE;                           /*!< Interrupt Enable Register*/
-
-  uint32_t INTR_TEST;                             /*!< Interrupt Test Register*/
-
   uint32_t CONTROL;                               /*!< Control register for flash controller*/
 
   uint32_t STATUS;                                /*!< Status register for flash controller*/
@@ -72,6 +66,8 @@ typedef struct {
   uint32_t MD_ADDRESS;                            /*!< Address where data with which we have to modify the flash is*/
 
   uint32_t LENGTH;                                /*!< Length of data to W/R*/
+
+  uint32_t INTR_STATUS;                           /*!< Interrupt status register*/
 
 } w25q128jw_controller;
 

@@ -7,8 +7,12 @@
 #include "w25q128jw.h"
 
 #include "w25q128jw_controller.h"
+#include "w25q128jw_controller_regs.h"
 #include "ram_new_data.h"
 
+#include "csr.h"
+#include "rv_plic.h"
+#include "dma.h" // For write_register function
 
 // RAM buffer of size of a sector
 uint32_t ram_buffer[1025];
@@ -29,7 +33,21 @@ uint32_t *rnd_address = ram_new_data;
 // Check function
 uint32_t check_result(uint8_t *test_buffer, uint32_t len);
 
+//
+// ISR
+//
+void handler_irq_w25q128jw_controller(uint32_t id) {
+    // Set the done flag
+    w25q128jw_controller_set_done_flag();
 
+    // Clear the interrupt flag
+    write_register( 0x0,
+                    W25Q128JW_CONTROLLER_INTERRUPT_REG_OFFSET,
+                    0x1,
+                    0,
+                    W25Q128JW_CONTROLLER_START_ADDRESS
+                );
+}
 
 __attribute__((optimize("O0"))) void w25q128jw_controller_run(){
     spi_host_t* spi;
@@ -37,12 +55,28 @@ __attribute__((optimize("O0"))) void w25q128jw_controller_run(){
 
     if (w25q128jw_init(spi) != FLASH_OK) return EXIT_FAILURE;
 
+    // Clear flag before starting operation
+    w25q128jw_controller_clear_done_flag();
+
+    // Activate interrupt in PLIC
+    plic_irq_set_priority(W25Q128JW_CONTROLLER_INTR_EVENT, 1);
+    plic_irq_set_enabled(W25Q128JW_CONTROLLER_INTR_EVENT, kPlicToggleEnabled);
+
+    // Activate global interrupts
+    CSR_SET_BITS(CSR_REG_MSTATUS, 0x8);   // MIE bit
+    CSR_SET_BITS(CSR_REG_MIE, (1 << 11)); // MEIE bit
+
     w25q128jw_controller_rnw(0, LENGTH_BYTES, flash_address, rb_address, rnd_address);
 
-    while(!w25q128jw_controller_is_ready_intr());
+    // Wait for interrupt 
+    while(!w25q128jw_controller_is_ready_intr()) {
+        asm volatile("wfi");  // Wait For Interrupt - CPU sleeps
+    }
 }
 
 int main(void) {
+    // Initialize PLIC
+    plic_Init();
 
     w25q128jw_controller_run();
 

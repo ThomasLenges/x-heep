@@ -334,9 +334,10 @@ module w25q128jw_controller #(
 
     hw2reg.control.start.de = 1'b0;
     hw2reg.control.start.d = 1'b0;
-
     hw2reg.length.de = 1'b0;
     hw2reg.length.d = 32'h0;
+    hw2reg.intr_status.de   = 1'b0;
+    hw2reg.intr_status.d    = 1'b0;
 
     // ========== TOP FSM ==================
 
@@ -472,7 +473,8 @@ module w25q128jw_controller #(
             obi_start = 1'b1;
 
             if (reg2hw.control.rnw) begin
-              data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) | {19'h0, FC_RD};
+              data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) |
+                  {19'h0, FC_RD};
             end else begin
               data = (((bitfield_byteswap32((reg2hw.r_address & 32'h00fff000) +
                                             (sector_iter_offset_q))) >> 8) << 8) | {19'h0, FC_RD};
@@ -541,6 +543,8 @@ module w25q128jw_controller #(
                 w25q128jw_controller_done_o = 1'b1;
                 hw2reg.control.start.de     = 1'b1;
                 hw2reg.control.start.d      = 1'b0;
+                hw2reg.intr_status.de   = 1'b1;
+                hw2reg.intr_status.d    = 1'b1;
               end else begin
                 read_state_d  = READ_IDLE;
                 top_state_d   = TOP_FWAIT;
@@ -580,6 +584,8 @@ module w25q128jw_controller #(
                   w25q128jw_controller_done_o = 1'b1;
                   hw2reg.control.start.de = 1'b1;
                   hw2reg.control.start.d = 1'b0;
+                  hw2reg.intr_status.de   = 1'b1;
+                  hw2reg.intr_status.d    = 1'b1;
                 end
 
                 default: begin
@@ -704,6 +710,8 @@ module w25q128jw_controller #(
                     w25q128jw_controller_done_o = 1'b1;
                     hw2reg.control.start.de = 1'b1;
                     hw2reg.control.start.d = 1'b0;
+                    hw2reg.intr_status.de   = 1'b1;
+                    hw2reg.intr_status.d    = 1'b1;
                   end
 
                   default: begin
@@ -1017,8 +1025,8 @@ module w25q128jw_controller #(
           WRITE_PP_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
             data = (((bitfield_byteswap32(((reg2hw.r_address & 32'h00fff000) + (sector_iter_offset_q)) |
-                                          ({28'h0, page_cnt_q} << 8))) >> 8) << 8) |
-                {19'h0, FC_PP};  // Program page per page in entire sector which we are currently writing to (16 pages per sector)
+                                          ({28'h0, page_cnt_q} << 8))) >> 8) << 8) | {19'h0, FC_PP}
+                ;  // Program page per page in entire sector which we are currently writing to (16 pages per sector)
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -1494,7 +1502,7 @@ module w25q128jw_controller #(
   assign hw2reg.status.d = (top_state_q == TOP_IDLE);
   assign hw2reg.status.de = 1'b1;
 
-  // assign w25q128jw_controller_interrupt_o = reg2hw.interrupt; // handler lowers interrupt reg (interrupt reg risen in hw2reg by FSM when done)
+  assign w25q128jw_controller_interrupt_o = reg2hw.intr_status; // handler lowers interrupt reg (interrupt reg risen in hw2reg by FSM when done)
 
   // Registers 
   w25q128jw_controller_reg_top #(
