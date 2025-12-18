@@ -519,7 +519,7 @@ ${pad.core_v_mini_mcu_interface}
       .w25q128jw_controller_done_o(w25q128jw_controller_done_o),
       .w25q128jw_controller_master_bus_req_o(w25q128jw_controller_master_bus_req_i),
       .w25q128jw_controller_master_bus_resp_i(w25q128jw_controller_master_bus_resp_o),
-      .dma_done(dma_done_o)
+      .dma_done_i(dma_done_o)
   );
 
   // Debug_req assign

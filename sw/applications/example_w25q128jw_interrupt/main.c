@@ -11,7 +11,7 @@
 
 
 // RAM buffer of size of a sector
-uint32_t ram_buffer[1024];
+uint32_t ram_buffer[1025];
 
 #define LENGTH_BYTES 4100
 #define LENGTH_WORDS ((LENGTH_BYTES + 3) / 4) // To deal with non-multiple of 4 bytes

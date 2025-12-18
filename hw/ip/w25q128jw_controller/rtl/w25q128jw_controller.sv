@@ -1,8 +1,6 @@
 module w25q128jw_controller #(
     parameter type reg_req_t = reg_pkg::reg_req_t,
     parameter type reg_rsp_t = reg_pkg::reg_rsp_t,
-    parameter logic [7:0] SPI_FLASH_TX_FIFO_DEPTH = 8'h48,
-    parameter logic [31:0] SPI_FLASH_RX_FIFO_DEPTH = 32'h40,
     parameter logic DMA_ZERO_PADDING = 1'b1,
     parameter logic DMA_ADDR_MODE = 1'b1
 ) (
@@ -22,28 +20,29 @@ module w25q128jw_controller #(
     // Master ports on the system bus
     output obi_pkg::obi_req_t w25q128jw_controller_master_bus_req_o,
     input obi_pkg::obi_resp_t w25q128jw_controller_master_bus_resp_i,
-    input logic [core_v_mini_mcu_pkg::DMA_CH_NUM-1:0] dma_done
+    input logic [core_v_mini_mcu_pkg::DMA_CH_NUM-1:0] dma_done_i
 );
   import w25q128jw_controller_reg_pkg::*;
   import core_v_mini_mcu_pkg::*;
   import spi_host_reg_pkg::*;
   import dma_reg_pkg::*;
 
+  localparam int SPI_FLASH_TX_FIFO_DEPTH = spi_host_reg_pkg::TxDepth;
+
   w25q128jw_controller_reg2hw_t reg2hw;
   w25q128jw_controller_hw2reg_t hw2reg;
 
   // FLASH COMMANDS
-  localparam logic [31:0] FC_RD = 32'h03,  // Read Data
-  FC_RSR1 = 32'h05,  // Read Status Register 1
-  FC_WE = 32'h06,  // Write Enable
-  FC_SE = 32'h20,  // Sector Erase 4KB
-  FC_PP = 32'h02,  // Page Program
-
+  localparam logic [12:0] FC_RD = 13'h03,  // Read Data
+  FC_RSR1 = 13'h05,  // Read Status Register 1
+  FC_WE = 13'h06,  // Write Enable
+  FC_SE = 13'h20,  // Sector Erase 4KB
+  FC_PP = 13'h02,  // Page Program
   // SIZE CONSTANTS
-  SE_WSIZE = 32'h400,  // Sector size in words
-  SE_BSIZE = 32'h1000,  // Sector size in bytes
-  PAGE_WSIZE = 32'h40,  // Page size in words
-  PAGE_BSIZE = 32'h100;  // Page size in bytes
+  SE_WSIZE = 13'h400,  // Sector size in words
+  SE_BSIZE = 13'h1000,  // Sector size in bytes XXX
+  PAGE_WSIZE = 13'h40,  // Page size in words
+  PAGE_BSIZE = 13'h100;  // Page size in bytes
 
   // BYTE SWAP FUNCTION
   function automatic [31:0] bitfield_byteswap32(input [31:0] adress_to_swap);
@@ -267,25 +266,21 @@ module w25q128jw_controller #(
 
   logic [1:0] fwait_cnt_q, fwait_cnt_d;
   logic [3:0] page_cnt_q, page_cnt_d;
-  logic [31:0] sector_offset, sector_cnt_d, sector_cnt_q;
+  logic [31:0] sector_offset, sector_iter_offset_d, sector_iter_offset_q;
 
   logic pass_fwait;
 
-`ifdef PASS_FWAIT
+
+
+`ifndef FPGA_SYNTHESIS
+`ifndef SYNTHESIS
   assign pass_fwait = 1'b1;
 `else
   assign pass_fwait = 1'b0;
 `endif
-
-  // `ifndef FPGA_SYNTHESIS
-  //   `ifndef SYNTHESIS
-  //     assign pass_fwait = 1'b1;
-  //   `else
-  //     assign pass_fwait = 1'b0;
-  //   `endif
-  // `else
-  //   assign pass_fwait = 1'b0;
-  // `endif
+`else
+  assign pass_fwait = 1'b0;
+`endif
 
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
@@ -300,7 +295,7 @@ module w25q128jw_controller #(
       write_state_q <= WRITE_IDLE;
       fwait_cnt_q   <= 2'b0;
       page_cnt_q    <= 4'b0;
-      sector_cnt_q <= 32'h0;
+      sector_iter_offset_q <= 32'h0;
     end else begin
       dma_init_state_q <= dma_init_state_d;
       dma_init_return_q <= dma_init_return_d;
@@ -312,7 +307,7 @@ module w25q128jw_controller #(
       write_state_q <= write_state_d;
       fwait_cnt_q   <= fwait_cnt_d;
       page_cnt_q    <= page_cnt_d;
-      sector_cnt_q <= sector_cnt_d;
+      sector_iter_offset_q <= sector_iter_offset_d;
     end
   end
 
@@ -327,7 +322,7 @@ module w25q128jw_controller #(
     write_state_d = write_state_q;
     fwait_cnt_d = fwait_cnt_q;
     page_cnt_d = page_cnt_q;
-    sector_cnt_d = sector_cnt_q;
+    sector_iter_offset_d = sector_iter_offset_q;
 
     address = 32'h00000000;
     data = 32'h00000000;
@@ -448,13 +443,13 @@ module w25q128jw_controller #(
             obi_start = 1'b1;
 
             if (reg2hw.control.rnw) begin
-              if (reg2hw.length % 4 == 0) begin
+              if (reg2hw.length[1:0] == 0) begin
                 data = reg2hw.length >> 2;  // Number of words to transfer
               end else begin
                 data = (reg2hw.length >> 2) + 1;  // Number of bytes to transfer rounded to next word
               end
             end else begin
-              data = SE_WSIZE;
+              data = {19'b0, SE_WSIZE};
             end
 
             if (obi_finish) begin
@@ -466,7 +461,7 @@ module w25q128jw_controller #(
             address   = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_STATUS_OFFSET};
             obi_start = 1'b1;
 
-            if (obi_finish && read_value[7:0] < SPI_FLASH_TX_FIFO_DEPTH) begin
+            if (obi_finish && read_value[7:0] < SPI_FLASH_TX_FIFO_DEPTH[7:0]) begin
               read_state_d = READ_SPI_FILL_TX_FIFO;
             end
           end
@@ -477,10 +472,10 @@ module w25q128jw_controller #(
             obi_start = 1'b1;
 
             if (reg2hw.control.rnw) begin
-              data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) | FC_RD;
+              data = (((bitfield_byteswap32(reg2hw.r_address & 32'h00ffffff)) >> 8) << 8) | {19'h0, FC_RD};
             end else begin
               data = (((bitfield_byteswap32((reg2hw.r_address & 32'h00fff000) +
-                                            (SE_BSIZE * sector_cnt_q))) >> 8) << 8) | FC_RD;
+                                            (sector_iter_offset_q))) >> 8) << 8) | {19'h0, FC_RD};
             end
 
             if (obi_finish) begin
@@ -528,7 +523,7 @@ module w25q128jw_controller #(
               };  // Empty + Direction + Speed + Csaat + Length
             end else begin
               data = {
-                3'h0, 2'h1, 2'h0, 1'h0, SE_BSIZE[23:0] - 1'h1
+                3'h0, 2'h1, 2'h0, 1'h0, {11'b0, SE_BSIZE - 1'h1}
               };  // Empty + Direction + Speed + Csaat + Length
             end
 
@@ -539,7 +534,7 @@ module w25q128jw_controller #(
           end
 
           READ_TRANS: begin
-            if (dma_done[0]) begin
+            if (dma_done_i[0]) begin
               if (reg2hw.control.rnw) begin
                 read_state_d                = READ_IDLE;
                 top_state_d                 = TOP_IDLE;
@@ -615,14 +610,14 @@ module w25q128jw_controller #(
             address   = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_STATUS_OFFSET};
             obi_start = 1'b1;
 
-            if (obi_finish && read_value[7:0] < SPI_FLASH_TX_FIFO_DEPTH) begin
+            if (obi_finish && read_value[7:0] < SPI_FLASH_TX_FIFO_DEPTH[7:0]) begin
               fwait_state_d = FWAIT_SPI_FILL_TX_FIFO;
             end
           end
 
           FWAIT_SPI_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = FC_RSR1;
+            data = {19'b0, FC_RSR1};
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -729,7 +724,7 @@ module w25q128jw_controller #(
 
 
       // ========== ERASE FSM ================== 
-
+      // taken from w12_controller/sw/bsp/sff.c
       TOP_ERASE: begin
         case (erase_state_q)
           ERASE_IDLE: begin
@@ -741,14 +736,14 @@ module w25q128jw_controller #(
             address   = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_STATUS_OFFSET};
             obi_start = 1'b1;
 
-            if (obi_finish && read_value[7:0] < SPI_FLASH_TX_FIFO_DEPTH) begin
+            if (obi_finish && read_value[7:0] < SPI_FLASH_TX_FIFO_DEPTH[7:0]) begin
               erase_state_d = ERASE_WE_FILL_TX_FIFO;
             end
           end
 
           ERASE_WE_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = FC_WE;
+            data = {19'b0, FC_WE};
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -781,7 +776,7 @@ module w25q128jw_controller #(
             address   = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_STATUS_OFFSET};
             obi_start = 1'b1;
 
-            if (obi_finish && read_value[7:0] < SPI_FLASH_TX_FIFO_DEPTH) begin
+            if (obi_finish && read_value[7:0] < SPI_FLASH_TX_FIFO_DEPTH[7:0]) begin
               erase_state_d = ERASE_SE_FILL_TX_FIFO;
             end
           end
@@ -789,7 +784,7 @@ module w25q128jw_controller #(
           ERASE_SE_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
             data = (((bitfield_byteswap32((reg2hw.r_address & 32'h00fff000) +
-                                          (SE_BSIZE * sector_cnt_q))) >> 8) << 8) | FC_SE;
+                                          (sector_iter_offset_q))) >> 8) << 8) | {19'h0, FC_SE};
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -829,7 +824,7 @@ module w25q128jw_controller #(
       // ========== MODIFY FSM =================
       TOP_MODIFY: begin
 
-        if (sector_cnt_d == 0) begin
+        if (sector_iter_offset_q == 0) begin
           sector_offset = reg2hw.r_address & 32'h00000fff;  // Offset within sector
         end else begin
           sector_offset = 32'h0;  // Begin from start of sector for next iterations
@@ -844,7 +839,7 @@ module w25q128jw_controller #(
 
           MODIFY_DMA_SRC_PTR: begin
             address = DMA_START_ADDRESS + {25'b0, DMA_SRC_PTR_OFFSET};
-            data = reg2hw.md_address + sector_cnt_q * SE_BSIZE;
+            data = reg2hw.md_address + sector_iter_offset_q;
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -924,14 +919,14 @@ module w25q128jw_controller #(
             w_enable  = 1'b1;
             obi_start = 1'b1;
 
-            if (reg2hw.length < SE_BSIZE - sector_offset) begin
-              if (reg2hw.length % 4 == 0) begin
+            if (reg2hw.length < {19'h0, SE_BSIZE} - sector_offset) begin
+              if (reg2hw.length[1:0] == 0) begin
                 data = reg2hw.length >> 2;  // Number of words to transfer
               end else begin
                 data = (reg2hw.length >> 2) + 1;  // Number of bytes to transfer rounded to next word
               end
             end else begin
-              data = ((SE_BSIZE - sector_offset) >> 2); // Number of words to transfer remaining in sector (can be entire sector also)
+              data = (({19'h0, SE_BSIZE} - sector_offset) >> 2); // Number of words to transfer remaining in sector (can be entire sector also)
             end
 
 
@@ -941,12 +936,12 @@ module w25q128jw_controller #(
           end
 
           MODIFY_TRANS: begin
-            if (dma_done[0]) begin
+            if (dma_done_i[0]) begin
               hw2reg.length.de = 1'b1;
-              if (reg2hw.length < SE_BSIZE - sector_offset) begin
+              if (reg2hw.length < {19'h0, SE_BSIZE} - sector_offset) begin
                 hw2reg.length.d  = 32'h0;  // Indicate that all data has been transferred in this iteration
               end else begin
-                hw2reg.length.d  = reg2hw.length - (SE_BSIZE - sector_offset);  // Indicate remaining length to be transferred in next iterations
+                hw2reg.length.d  = reg2hw.length - ({19'h0, SE_BSIZE} - sector_offset);  // Indicate remaining length to be transferred in next iterations
               end
 
               modify_state_d = MODIFY_IDLE;
@@ -974,14 +969,14 @@ module w25q128jw_controller #(
             address   = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_STATUS_OFFSET};
             obi_start = 1'b1;
 
-            if (obi_finish && read_value[7:0] < SPI_FLASH_TX_FIFO_DEPTH) begin
+            if (obi_finish && read_value[7:0] < SPI_FLASH_TX_FIFO_DEPTH[7:0]) begin
               write_state_d = WRITE_WE_FILL_TX_FIFO;
             end
           end
 
           WRITE_WE_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = FC_WE;  // Required every time before issuing a write command
+            data = {19'b0, FC_WE};  // Required every time before issuing a write command
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -1014,16 +1009,16 @@ module w25q128jw_controller #(
             address   = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_STATUS_OFFSET};
             obi_start = 1'b1;
 
-            if (obi_finish && read_value[7:0] < SPI_FLASH_TX_FIFO_DEPTH) begin
+            if (obi_finish && read_value[7:0] < SPI_FLASH_TX_FIFO_DEPTH[7:0]) begin
               write_state_d = WRITE_PP_FILL_TX_FIFO;
             end
           end
 
           WRITE_PP_FILL_TX_FIFO: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_TXDATA_OFFSET};
-            data = (((bitfield_byteswap32(((reg2hw.r_address & 32'h00fff000) + (SE_BSIZE * sector_cnt_q)) |
+            data = (((bitfield_byteswap32(((reg2hw.r_address & 32'h00fff000) + (sector_iter_offset_q)) |
                                           ({28'h0, page_cnt_q} << 8))) >> 8) << 8) |
-                FC_PP;  // Program page per page in entire sector which we are currently writing to (16 pages per sector)
+                {19'h0, FC_PP};  // Program page per page in entire sector which we are currently writing to (16 pages per sector)
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -1138,7 +1133,7 @@ module w25q128jw_controller #(
 
           WRITE_DMA_SIZE_D1: begin
             address = DMA_START_ADDRESS + {25'b0, DMA_SIZE_D1_OFFSET};
-            data = PAGE_WSIZE;
+            data = {19'b0, PAGE_WSIZE};
             w_enable = 1'b1;
             obi_start = 1'b1;
 
@@ -1148,7 +1143,7 @@ module w25q128jw_controller #(
           end
 
           WRITE_TRANS: begin
-            if (dma_done[0]) begin
+            if (dma_done_i[0]) begin
               write_state_d = WRITE_PP_WAIT_READY_2;
             end
           end
@@ -1165,7 +1160,7 @@ module w25q128jw_controller #(
           WRITE_PP_SEND_CMD_2: begin
             address = SPI_FLASH_START_ADDRESS + {25'b0, SPI_HOST_COMMAND_OFFSET};
             data = {
-              3'h0, 2'h2, 2'h0, 1'h0, PAGE_BSIZE[23:0] - 1'h1
+              3'h0, 2'h2, 2'h0, 1'h0, {11'b0, PAGE_BSIZE - 1'h1}
             };  // Empty + Direction + Speed + Csaat + Length
             w_enable = 1'b1;
             obi_start = 1'b1;
@@ -1179,7 +1174,7 @@ module w25q128jw_controller #(
                 end else begin  // REPEAT for next sector
                   fwait_cnt_d = 2'h0;
                   page_cnt_d = 4'b0;
-                  sector_cnt_d = sector_cnt_q + 1'h1;
+                  sector_iter_offset_d = sector_iter_offset_q + {19'b0, SE_BSIZE}; // Next sector offset in terms of bytes
                   top_state_d = TOP_READ;
                   write_state_d = WRITE_IDLE;
                 end
@@ -1498,6 +1493,8 @@ module w25q128jw_controller #(
   assign w25q128jw_controller_interrupt_o = 1'b0;
   assign hw2reg.status.d = (top_state_q == TOP_IDLE);
   assign hw2reg.status.de = 1'b1;
+
+  // assign w25q128jw_controller_interrupt_o = reg2hw.interrupt; // handler lowers interrupt reg (interrupt reg risen in hw2reg by FSM when done)
 
   // Registers 
   w25q128jw_controller_reg_top #(

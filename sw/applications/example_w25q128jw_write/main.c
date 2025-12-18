@@ -11,7 +11,7 @@
 
 
 // RAM buffer of size of a sector
-uint32_t ram_buffer[1024];
+uint32_t ram_buffer[1025];
 
 #define LENGTH_BYTES 4100
 #define LENGTH_WORDS ((LENGTH_BYTES + 3) / 4) // To deal with non-multiple of 4 bytes
@@ -39,9 +39,15 @@ __attribute__((optimize("O0"))) void w25q128jw_controller_run(){
     w25q128jw_controller_rnw(0, LENGTH_BYTES, flash_address, rb_address, rnd_address);
 
     while(!w25q128jw_controller_is_ready_polling());
+
+    w25q128jw_controller_rnw(1, LENGTH_BYTES, flash_address, rb_address, 0x00000000);
+
+    while(!w25q128jw_controller_is_ready_polling());
 }
 
 int main(void) {
+
+    printf("Write test with 4100 bytes\n");
 
     w25q128jw_controller_run();
 

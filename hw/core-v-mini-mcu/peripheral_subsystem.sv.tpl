@@ -87,11 +87,11 @@ module peripheral_subsystem
     output logic pdm2pcm_clk_en_o,
     input  logic pdm2pcm_pdm_i,
 
-    // My IP signals
+    // W25Q128JW controller 
     output logic     w25q128jw_controller_done_o,
     output obi_req_t w25q128jw_controller_master_bus_req_o,
     input  obi_resp_t w25q128jw_controller_master_bus_resp_i,
-    input  logic [core_v_mini_mcu_pkg::DMA_CH_NUM-1:0] dma_done
+    input  logic [core_v_mini_mcu_pkg::DMA_CH_NUM-1:0] dma_done_i
 );
 
   import core_v_mini_mcu_pkg::*;
@@ -655,7 +655,7 @@ w25q128jw_controller #(
       // Master ports on the system bus
       .w25q128jw_controller_master_bus_req_o,
       .w25q128jw_controller_master_bus_resp_i,
-      .dma_done
+      .dma_done_i
   );
 
 endmodule : peripheral_subsystem
