@@ -8,29 +8,23 @@
 
 #include "w25q128jw_controller.h"
 #include "w25q128jw_controller_regs.h"
-#include "ram_new_data.h"
+#include "flash_data.h"
 
 #include "csr.h"
 #include "rv_plic.h"
 #include "dma.h" // For write_register function
 
-// RAM buffer of size of a sector
-uint32_t ram_buffer[1025];
-
-#define LENGTH_BYTES 4100
+#define LENGTH_BYTES 128 // Adapt flash_data.c accordingly (max 128 bytes for this example)
 #define LENGTH_WORDS ((LENGTH_BYTES + 3) / 4) // To deal with non-multiple of 4 bytes
 
-// Flash buffer
-int32_t __attribute__((section(".xheep_data_flash_only"))) __attribute__ ((aligned (16))) flash_buffer[LENGTH_WORDS]; 
-
-// flash buffer address
+// RAM buffer to store data read from FLASH
+uint32_t ram_buffer[256];
+// Give address to read from FLASH (r_address)
 uint32_t *flash_address = flash_buffer;
-// RAM buffer address
-uint32_t *rb_address = ram_buffer;
-// RAM new data address
-uint32_t *rnd_address = ram_new_data;
+// Give address to store data read from FLASH (s_address)
+uint32_t *ram_buffer_address = ram_buffer;
 
-// Check function
+
 uint32_t check_result(uint8_t *test_buffer, uint32_t len);
 
 //
@@ -42,7 +36,7 @@ void handler_irq_w25q128jw_controller(uint32_t id) {
 
     // Clear the interrupt flag
     write_register( 0x0,
-                    W25Q128JW_CONTROLLER_INTERRUPT_REG_OFFSET,
+                    W25Q128JW_CONTROLLER_INTR_STATUS_REG_OFFSET,
                     0x1,
                     0,
                     W25Q128JW_CONTROLLER_START_ADDRESS
@@ -63,10 +57,10 @@ __attribute__((optimize("O0"))) void w25q128jw_controller_run(){
     plic_irq_set_enabled(W25Q128JW_CONTROLLER_INTR_EVENT, kPlicToggleEnabled);
 
     // Activate global interrupts
-    CSR_SET_BITS(CSR_REG_MSTATUS, 0x8);   // MIE bit
-    CSR_SET_BITS(CSR_REG_MIE, (1 << 11)); // MEIE bit
+    CSR_SET_BITS(CSR_REG_MSTATUS, 0x8);   // Global interrupt enable for machine mode (MIE) bit in Machine Status Registers
+    CSR_SET_BITS(CSR_REG_MIE, (1 << 11)); // Machine External Interrupt Enable (MEIE) bit in Machine Interrupt Pending Register
 
-    w25q128jw_controller_rnw(0, LENGTH_BYTES, flash_address, rb_address, rnd_address);
+    w25q128jw_controller_rnw(1, LENGTH_BYTES, flash_address, ram_buffer_address, 0x00000000);
 
     // Wait for interrupt 
     while(!w25q128jw_controller_is_ready_intr()) {
@@ -78,9 +72,11 @@ int main(void) {
     // Initialize PLIC
     plic_Init();
 
+    printf("Read test with 128 bytes\n");
+
     w25q128jw_controller_run();
 
-    uint32_t res =  check_result(ram_new_data, LENGTH_BYTES);
+    uint32_t res =  check_result(ram_golden_data, LENGTH_BYTES);
 
     if (res == 0){
         return EXIT_SUCCESS;
@@ -89,14 +85,13 @@ int main(void) {
     }
 }
 
-
-uint32_t check_result(uint8_t *expected_data, uint32_t len) {
+uint32_t check_result(uint8_t *test_buffer, uint32_t len) {
     uint32_t errors = 0;
     uint8_t *ram_buffer_char = (uint8_t *)ram_buffer;
 
     for (uint32_t i = 0; i < len; i++) {
-        if (expected_data[i] != ram_buffer_char[i]) {
-            printf("Error at position %d: expected %x, got %x\n", i, expected_data[i], ram_buffer_char[i]);
+        if (test_buffer[i] != ram_buffer_char[i]) {
+            printf("Error at position %d: expected %x, got %x\n", i, test_buffer[i], ram_buffer_char[i]);
             errors++;
             break;
         }

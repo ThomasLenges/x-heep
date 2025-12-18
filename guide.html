@@ -77,7 +77,7 @@ conda activate core-v-mini-mcu</code></pre>
     <h2>5️⃣ Run Simulation (QuestaSim)</h2>
     <pre><code>make questasim-build-opt
 cd ./build/openhwgroup.org_systems_core-v-mini-mcu_1.0.1/sim-modelsim/
-make run-gui RUN_OPT=1 PASS_FWAIT=1 PLUSARGS="c firmware=../../../sw/build/main.hex boot_sel=1 execute_from_flash=0" &
+make run-gui RUN_OPT=1 PLUSARGS="c firmware=../../../sw/build/main.hex boot_sel=1 execute_from_flash=0" &
 run -all (restart for change in application)
 cat uart0.log
 # boot_sel=1 for flash_load/flash_exec linker, on_chip=0

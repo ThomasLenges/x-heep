@@ -1498,10 +1498,8 @@ module w25q128jw_controller #(
   end
 
   // Assignments
-  assign w25q128jw_controller_interrupt_o = 1'b0;
   assign hw2reg.status.d = (top_state_q == TOP_IDLE);
   assign hw2reg.status.de = 1'b1;
-
   assign w25q128jw_controller_interrupt_o = reg2hw.intr_status; // handler lowers interrupt reg (interrupt reg risen in hw2reg by FSM when done)
 
   // Registers 
