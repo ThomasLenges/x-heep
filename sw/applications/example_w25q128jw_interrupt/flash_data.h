@@ -1,6 +1,16 @@
+/**
+ * @file flash_data.h
+ * @brief Test data buffers for flash read operations.
+ *
+ * This file contains:
+ * - Golden data in RAM for verification purposes
+ * - Flash buffer with identical data to be read by the controller
+ */
+
 #include <stdint.h>
 
 // Copy of data stored in flash to be able to verify read operation 
+// After a read operation, ram_buffer should match this golden data.
 int32_t __attribute__ ((aligned (16))) ram_golden_data[32] = {
     0xABCDEF00,
     0xABCDEF01,

@@ -18,8 +18,8 @@ extern "C" {
 #define W25Q128JW_CONTROLLER_STATUS_REG_OFFSET 0x4
 #define W25Q128JW_CONTROLLER_STATUS_READY_BIT 0
 
-// Address in Flash to read from/write to
-#define W25Q128JW_CONTROLLER_R_ADDRESS_REG_OFFSET 0x8
+// Address in flash to read from/write to
+#define W25Q128JW_CONTROLLER_F_ADDRESS_REG_OFFSET 0x8
 
 // Address to store read data from SPI_FLASH
 #define W25Q128JW_CONTROLLER_S_ADDRESS_REG_OFFSET 0xc

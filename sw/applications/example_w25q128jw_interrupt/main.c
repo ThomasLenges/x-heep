@@ -1,3 +1,15 @@
+/**
+ * @file main.c
+ * @brief Example application for W25Q128JW flash read test with interrupt.
+ *
+ * This application demonstrates reading data from the W25Q128JW flash memory 
+ * and verifying the contents match to the golden data.
+ *
+ * Test parameters:
+ * - Transfer size: 128 bytes (read operation is byte precise)
+ * - Mode: Interrupt-based completion detection (see "example_w25q128jw_read" for polling-based)
+ */
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -10,21 +22,29 @@
 #include "w25q128jw_controller_regs.h"
 #include "flash_data.h"
 
-#include "csr.h"
-#include "rv_plic.h"
+#include "csr.h" // For CSR macros
+#include "rv_plic.h" // For PLIC functions
 #include "dma.h" // For write_register function
 
-#define LENGTH_BYTES 128 // Adapt flash_data.c accordingly (max 128 bytes for this example)
+// Number of bytes to transfer
+#define LENGTH_BYTES 128
+// Number of words to transfer
 #define LENGTH_WORDS ((LENGTH_BYTES + 3) / 4) // To deal with non-multiple of 4 bytes
 
 // RAM buffer to store data read from FLASH
 uint32_t ram_buffer[256];
-// Give address to read from FLASH (r_address)
+// flash buffer address
 uint32_t *flash_address = flash_buffer;
-// Give address to store data read from FLASH (s_address)
+// RAM buffer address
 uint32_t *ram_buffer_address = ram_buffer;
 
-
+/**
+ * @brief Compares read data against expected data.
+ *
+ * @param test_buffer   Pointer to the expected data buffer (what one should read back).
+ * @param len           Number of bytes to compare (byte precise).
+ * @return              0 if data matches, 1 otherwise.
+ */
 uint32_t check_result(uint8_t *test_buffer, uint32_t len);
 
 //
@@ -34,7 +54,7 @@ void handler_irq_w25q128jw_controller(uint32_t id) {
     // Set the done flag
     w25q128jw_controller_set_done_flag();
 
-    // Clear the interrupt flag
+    // Clear the interrupt status register (interrupt handled)
     write_register( 0x0,
                     W25Q128JW_CONTROLLER_INTR_STATUS_REG_OFFSET,
                     0x1,
@@ -43,6 +63,17 @@ void handler_irq_w25q128jw_controller(uint32_t id) {
                 );
 }
 
+/**
+ * @brief Runs the flash read test sequence.
+ *
+ * This function:
+ * 1. Initializes the SPI flash
+ * 2. Clear the internal done flag
+ * 3. Activates the interrupt in the PLIC and globally
+ * 4. Launches read operation
+ * 5. Waits for read completion (interrupt)
+ *
+ */
 __attribute__((optimize("O0"))) void w25q128jw_controller_run(){
     spi_host_t* spi;
     spi = spi_flash;
@@ -72,7 +103,7 @@ int main(void) {
     // Initialize PLIC
     plic_Init();
 
-    printf("Read test with 128 bytes\n");
+    printf("Read test with 128 bytes w/ interrupt\n");
 
     w25q128jw_controller_run();
 

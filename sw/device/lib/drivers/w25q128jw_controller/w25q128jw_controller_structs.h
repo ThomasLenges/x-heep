@@ -5,7 +5,7 @@
 **                                                                         **
 ** project  : x-heep                                                       **
 ** filename : w25q128jw_controller_structs.h                                 **
-** date     : 18/12/2025                                                      **
+** date     : 22/12/2025                                                      **
 **                                                                         **
 *****************************************************************************
 **                                                                         **
@@ -16,7 +16,7 @@
 
 /**
 * @file   w25q128jw_controller_structs.h
-* @date   18/12/2025
+* @date   22/12/2025
 * @brief  Contains structs for every register
 *
 * This file contains the structs of the registes of the peripheral.
@@ -59,7 +59,7 @@ typedef struct {
 
   uint32_t STATUS;                                /*!< Status register for flash controller*/
 
-  uint32_t R_ADDRESS;                             /*!< Address in Flash to read from/write to*/
+  uint32_t F_ADDRESS;                             /*!< Address in flash to read from/write to*/
 
   uint32_t S_ADDRESS;                             /*!< Address to store read data from SPI_FLASH*/
 

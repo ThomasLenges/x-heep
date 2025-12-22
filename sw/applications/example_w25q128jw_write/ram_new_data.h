@@ -1,6 +1,17 @@
+/**
+ * @file ram_new_data.h
+ * @brief Test data buffer for flash write operations.
+ *
+ * This file contains the data to be written to flash memory during
+ * write tests.
+ */
+
 #include <stdint.h>
 
-// what to write in flash
+/**
+ * @note Buffer size is 1025 words (4100 bytes) hence going over 2 sectors (1 sector being 4096 bytes).
+ * Data is organized in pages (256 bytes).
+ */
 uint32_t ram_new_data[1025] = {
     0x76543211, 0xfedcba99, 0x579a6f91, 0x657d5bef, 0x758ee420, 0x01234568, 0xfedbca97, 0x89abde00,
     0x76543212, 0xfedcba9a, 0x579a6f92, 0x657d5bf0, 0x758ee421, 0x01234569, 0xfedbca98, 0x89abde01,

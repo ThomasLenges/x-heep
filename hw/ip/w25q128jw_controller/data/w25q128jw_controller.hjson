@@ -11,8 +11,8 @@
       swaccess: "rw"
       hwaccess: "hrw"
       fields: [
-        { bits: "1", name: "RNW", desc: "read not write", resval: "0x0" }
-        { bits: "0", name: "START", desc: "Start action", resval: "0x0" }
+        { bits: "1", name: "RNW", desc: "Read Not Write operation mode", resval: "0x0" }
+        { bits: "0", name: "START", desc: "Start operation", resval: "0x0" }
       ]
     }
 
@@ -21,16 +21,16 @@
       swaccess: "rw"
       hwaccess: "hrw"
       fields: [
-        { bits: "0", name: "READY", desc: "Ready for new read/write", resval: "0x0" }
+        { bits: "0", name: "READY", desc: "Ready for new operation", resval: "0x0" }
       ]
     }
 
-    { name: "R_ADDRESS"
-      desc: "Address in Flash to read from/write to"
+    { name: "F_ADDRESS"
+      desc: "Address in flash to read from/write to"
       swaccess: "rw"
       hwaccess: "hrw"
       fields: [
-        { bits: "31:0", name: "R_ADDRESS", desc: "Address to read from" }
+        { bits: "31:0", name: "F_ADDRESS", desc: "Address in flash to read from/write to" }
       ]
     }
 

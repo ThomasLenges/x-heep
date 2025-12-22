@@ -1,3 +1,15 @@
+/**
+ * @file main.c
+ * @brief Example application for W25Q128JW flash read test.
+ *
+ * This application demonstrates reading data from the W25Q128JW flash memory 
+ * and verifying the contents match to the golden data.
+ *
+ * Test parameters:
+ * - Transfer size: 128 bytes (read operation is byte precise)
+ * - Mode: Polling-based completion detection (see "example_w25q128jw_interrupt" for interrupt-based)
+ */
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -9,20 +21,36 @@
 #include "w25q128jw_controller.h"
 #include "flash_data.h"
 
-#define LENGTH_BYTES 128 // Adapt flash_data.c accordingly (max 128 bytes for this example)
+// Number of bytes to transfer
+#define LENGTH_BYTES 128 
+// Number of words to transfer
 #define LENGTH_WORDS ((LENGTH_BYTES + 3) / 4) // To deal with non-multiple of 4 bytes
 
 // RAM buffer to store data read from FLASH
 uint32_t ram_buffer[256];
-// Give address to read from FLASH (r_address)
+// flash buffer address
 uint32_t *flash_address = flash_buffer;
-// Give address to store data read from FLASH (s_address)
+// RAM buffer address
 uint32_t *ram_buffer_address = ram_buffer;
 
-
+/**
+ * @brief Compares read data against expected data.
+ *
+ * @param test_buffer   Pointer to the expected data buffer (what one should read back).
+ * @param len           Number of bytes to compare (byte precise).
+ * @return              0 if data matches, 1 otherwise.
+ */
 uint32_t check_result(uint8_t *test_buffer, uint32_t len);
 
-
+/**
+ * @brief Runs the flash read test sequence.
+ *
+ * This function:
+ * 1. Initializes the SPI flash
+ * 2. Launches read operation
+ * 3. Waits for read completion (polling)
+ *
+ */
 __attribute__((optimize("O0"))) void w25q128jw_controller_run(){
     spi_host_t* spi;
     spi = spi_flash;

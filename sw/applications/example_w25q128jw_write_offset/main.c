@@ -15,10 +15,10 @@ uint32_t ram_buffer[1025];
 
 #define LENGTH_BYTES 12
 #define LENGTH_WORDS ((LENGTH_BYTES + 3) / 4) // To deal with non-multiple of 4 bytes
-#define OFFSET_BYTES 4
+#define OFFSET_WORDS 1
 
 // Flash buffer
-int32_t __attribute__((section(".xheep_data_flash_only"))) __attribute__ ((aligned (16))) flash_buffer[LENGTH_WORDS]; 
+int32_t __attribute__((section(".xheep_data_flash_only"))) __attribute__ ((aligned (16))) flash_buffer[LENGTH_WORDS+OFFSET_WORDS]; 
 
 // flash buffer address
 uint32_t *flash_address = flash_buffer;
@@ -37,25 +37,31 @@ __attribute__((optimize("O0"))) void w25q128jw_controller_run(){
 
     if (w25q128jw_init(spi) != FLASH_OK) return EXIT_FAILURE;
 
-    w25q128jw_controller_rnw(0, LENGTH_BYTES, flash_address+OFFSET_BYTES, rb_address, rnd_address); // Try with one word offset
+    printf("ram_buffer[0] = 0x%08x\n", ram_buffer[0]);
+    printf("ram_buffer[1] = 0x%08x\n", ram_buffer[1]);
+    printf("ram_buffer[2] = 0x%08x\n", ram_buffer[2]);
+    printf("ram_buffer[3] = 0x%08x\n", ram_buffer[3]);
+    printf("ram_buffer[4] = 0x%08x\n", ram_buffer[4]);
 
-    printf(ram_buffer[0]);
-    printf(ram_buffer[1]);
-    printf(ram_buffer[2]);
-    printf(ram_buffer[3]);
-    printf(ram_buffer[4]);  
+    w25q128jw_controller_rnw(0, LENGTH_BYTES,flash_address + OFFSET_WORDS, rb_address, rnd_address); // Try with one word offset
+
+    while(!w25q128jw_controller_is_ready_polling());
+
+    printf("ram_buffer[0] = 0x%08x\n", ram_buffer[0]);
+    printf("ram_buffer[1] = 0x%08x\n", ram_buffer[1]);
+    printf("ram_buffer[2] = 0x%08x\n", ram_buffer[2]);
+    printf("ram_buffer[3] = 0x%08x\n", ram_buffer[3]);
+    printf("ram_buffer[4] = 0x%08x\n", ram_buffer[4]);
+
+    w25q128jw_controller_rnw(1, LENGTH_BYTES,flash_address + OFFSET_WORDS, rb_address, 0x00000000); // Read back with offset too to check result
 
     while(!w25q128jw_controller_is_ready_polling());
 
-    w25q128jw_controller_rnw(1, LENGTH_BYTES, flash_address, rb_address, 0x00000000);
-
-    printf(ram_buffer[0]);
-    printf(ram_buffer[1]);
-    printf(ram_buffer[2]);
-    printf(ram_buffer[3]);
-    printf(ram_buffer[4]); 
-
-    while(!w25q128jw_controller_is_ready_polling());
+    printf("ram_buffer[0] = 0x%08x\n", ram_buffer[0]);
+    printf("ram_buffer[1] = 0x%08x\n", ram_buffer[1]);
+    printf("ram_buffer[2] = 0x%08x\n", ram_buffer[2]);
+    printf("ram_buffer[3] = 0x%08x\n", ram_buffer[3]);
+    printf("ram_buffer[4] = 0x%08x\n", ram_buffer[4]);
 }
 
 int main(void) {
@@ -76,7 +82,7 @@ int main(void) {
 
 uint32_t check_result(uint8_t *expected_data, uint32_t len) {
     uint32_t errors = 0;
-    uint8_t *ram_buffer_char = (uint8_t *)ram_buffer + OFFSET_BYTES;
+    uint8_t *ram_buffer_char = (uint8_t *)ram_buffer;
 
     for (uint32_t i = 0; i < len; i++) {
         if (expected_data[i] != ram_buffer_char[i]) {
