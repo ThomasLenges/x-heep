@@ -13,9 +13,9 @@
 // RAM buffer of size of a sector
 uint32_t ram_buffer[1025];
 
-#define LENGTH_BYTES 12
+#define LENGTH_BYTES 12 
 #define LENGTH_WORDS ((LENGTH_BYTES + 3) / 4) // To deal with non-multiple of 4 bytes
-#define OFFSET_WORDS 1
+#define OFFSET_WORDS 1 // 1 for checking offset at start // 1023 for checking offset at end
 
 // Flash buffer
 int32_t __attribute__((section(".xheep_data_flash_only"))) __attribute__ ((aligned (16))) flash_buffer[LENGTH_WORDS+OFFSET_WORDS]; 
@@ -66,7 +66,7 @@ __attribute__((optimize("O0"))) void w25q128jw_controller_run(){
 
 int main(void) {
 
-    printf("Write test with 4100 bytes\n");
+    printf("Write test with offset bytes\n");
 
     w25q128jw_controller_run();
 
