@@ -85,8 +85,8 @@ uint32_t check_result(uint8_t *expected_data, uint32_t len) {
     uint8_t *ram_buffer_char = (uint8_t *)ram_buffer;
 
     for (uint32_t i = 0; i < len; i++) {
-        if (expected_data[i] != ram_buffer_char[i]) {
-            printf("Error at position %d: expected %x, got %x\n", i, expected_data[i], ram_buffer_char[i]);
+        if (expected_data[i] != ram_buffer_char[i+OFFSET_WORDS]) {
+            printf("Error at position %d: expected %x, got %x\n", i, expected_data[i], ram_buffer_char[i+OFFSET_WORDS]);
             errors++;
             break;
         }
