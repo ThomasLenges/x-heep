@@ -4,7 +4,7 @@ There are two ways of setting up X-HEEP. You can either use the provided Docker 
 
 ## Docker setup
 
-A Docker image containing all the required software dependencies is available on [github-packages](https://ghcr.io/esl-epfl/x-heep/x-heep-toolchain:latest).
+A Docker image containing all the required software dependencies is available on [github-packages](https://ghcr.io/x-heep/x-heep/x-heep-toolchain:latest).
 
 It is only required to [install Docker](https://docs.docker.com/engine/install/), pull the image and run the container. The pull and run steps are wrapped in dedicated `makefile` targets that you can access from the top-level directory as:
 ```bash
@@ -18,9 +18,9 @@ The Docker image provides built-in shortcuts (as Bash functions) to select among
 
 | Shortcut | Description | Configuration |
 | -------- | ----------- | ------------- |
+| `init_corev` | Use the Embecosm CORE-V toolchain with PULP extension | `COMPILER=gcc`<br>`COMPILER_PREFIX=riscv32-corev-`<br>`ARCH=rv32imc_zicsr_zifencei_xcvhwlp_xcvmem_xcvmac_xcvbi_xcvalu_xcvsimd_xcvbitmanip` |
 | `init_gcc` | Use the GCC toolchain | `COMPILER=gcc`<br>`COMPILER_PREFIX=riscv32-unknown-`<br>`ARCH=rv32imc_zicsr` |
 | `init_clang` | Use the LLVM/Clang toolchain | `COMPILER=clang`<br>`COMPILER_PREFIX=riscv32-unknown-`<br>`ARCH=rv32imc_zicsr` |
-| `init_corev` | Use the Embecosm CORE-V toolchain with PULP extension | `COMPILER=gcc`<br>`COMPILER_PREFIX=riscv32-unknown-`<br>`ARCH=rv32imc_zicsr_zifencei_xcvhwlp_xcvmem_xcvmac_xcvbi_xcvalu_xcvsimd_xcvbitmanip` |
 
 For example, if you want to compile and link the `hello_world` application using LLVM/Clang:
 ```bash
@@ -44,7 +44,7 @@ To use `X-HEEP`, first you will need to install some OS dependencies.
 
 The following command `apt` command should install every required package (tested on an Ubuntu 22.04 distribution):
 ```bash
-sudo apt install autoconf automake autotools-dev curl python3 python3-pip python3-tomli libmpc-dev libmpfr-dev libgmp-dev gawk build-essential bison flex texinfo gperf libtool patchutils bc zlib1g-dev libexpat-dev ninja-build git cmake libglib2.0-dev libslirp-dev help2man perl make g++ libfl2 libfl-dev zlibc zlib1g zlib1g-dev ccache mold libgoogle-perftools-dev numactl
+sudo apt install autoconf automake autotools-dev curl python3 python3-pip python3-tomli libmpc-dev libmpfr-dev libgmp-dev gawk build-essential bison flex texinfo gperf libtool patchutils bc zlib1g-dev libexpat-dev ninja-build git cmake libglib2.0-dev libslirp-dev help2man perl make g++ libfl2 libfl-dev zlibc zlib1g zlib1g-dev ccache mold libgoogle-perftools-dev numactl libelf-dev
 ```
 
 Errors occurring when installing the following packages may be ignored:
@@ -99,6 +99,12 @@ source .venv/bin/activate
 The RISC-V toolchain environment variable name has changed. Use `RISCV_XHEEP` instead of `RISCV` to avoid conflicts with other projects. If you previously exported `RISCV` for X-HEEP, update your shell initialization files (e.g., `~/.bashrc`, `~/.zshrc`) or environment modules to export `RISCV_XHEEP` and remove or adjust any old `RISCV` definitions accordingly.
 ```
 
+X-HEEP supports the [CORE-V toolchain from Embecosm](https://embecosm.com/downloads/tool-chain-downloads/#core-v-top-of-tree-compilers), but you can also use the standard RISC-V GCC or CLANG toolchains.
+
+You can download and install the CORE-V toolchain by following the instructions on the [Embecosm download page](https://embecosm.com/downloads/tool-chain-downloads/#core-v-top-of-tree-compilers). This is the recommended option since it includes support for the PULP extensions that can be enabled in X-HEEP and is the default toolchain for the provided compilation flow.
+
+Optionally, you can also build and install the standard RISC-V GCC toolchain from source.
+
 The RISC-V compiler requires the [following packages](https://github.com/riscv-collab/riscv-gnu-toolchain) to be installed (Check [OS requirements](#1-os-requirements) for Ubuntu distribution). The GitHub page contains instructions for other linux distributions.
 
 Then the installation can proceed with the following commands :
@@ -137,6 +143,10 @@ git checkout llvmorg-19.1.4
 cmake -S llvm -B build -G "Ninja" -DLLVM_ENABLE_PROJECTS="clang;lld" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR} -DLLVM_TARGETS_TO_BUILD="RISCV" -DLLVM_USE_LINKER=lld
 cmake --build build --target install # or ninja -C build install
 ```
+
+By default, when compiling an application with Clang, X-HEEP will link with the LLD linker.
+If you want to use the GCC linker, you will need to pass to the `make app` target the
+`CLANG_LINKER_USE_LD=1` option.
 
 ### 4. Install Verilator:
 

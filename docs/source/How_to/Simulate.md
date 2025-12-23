@@ -2,8 +2,6 @@
 
 This project supports simulation with Verilator, Synopsys VCS, Siemens Questasim and Cadence Xcelium.
 We use [FuseSoC](https://github.com/olofk/fusesoc) for all the EDA tools we use. The `fusesoc` commands are used in the targets in the Makefile.
-For example, if you want to set the `FPU` and `COREV_PULP` parameters of the `cv32e40p` CPU,
-you need to add next to your compilation command `FUSESOC_PARAM="--COREV_PULP=1 --FPU=1"`
 Below the different EDA examples commands.
 
 ## Simulating with Verilator
@@ -65,19 +63,19 @@ make vcs-build
 then, go to your target system built folder
 
 ```bash
-cd ./build/openhwgroup.org_systems_core-v-mini-mcu_0/sim-vcs
+cd ./build/openhwgroup.org_systems_core-v-mini-mcu_<version>/sim-vcs
 ```
 
 and type to run your compiled software:
 
 ```bash
-./openhwgroup.org_systems_core-v-mini-mcu_0 +firmware=../../../sw/build/main.hex
+./openhwgroup.org_systems_core-v-mini-mcu_<version> +firmware=../../../sw/build/main.hex
 ```
 
 Waveforms can be viewed with Verdi. Make sure you have the env variable `VERDI_HOME` set to your Verdi install folder, then run your compiled software as above, but with the `-gui` flag:
 
 ```bash
-./openhwgroup.org_systems_core-v-mini-mcu_0 +firmware=../../../sw/build/main.hex -gui
+./openhwgroup.org_systems_core-v-mini-mcu_<version> +firmware=../../../sw/build/main.hex -gui
 ```
 
 An Analog / Mixed-Signal simulation of X-HEEP, combining both the RTL system verilog files for the digital part and a SPICE file connected through a `control.init` file for the analog / mixed-signal part, can be ran by typing
@@ -89,7 +87,7 @@ make vcs-ams-build
 then going to the target system built folder
 
 ```bash
-cd ./build/openhwgroup.org_systems_core-v-mini-mcu_0/sim-vcs
+cd ./build/openhwgroup.org_systems_core-v-mini-mcu_<version>/sim-vcs
 ```
 
 and running the same executable as for the digital simulation. Note that with Verdi you can view both the digital and the analog waveforms.
@@ -107,7 +105,7 @@ make questasim-build
 then, go to your target system built folder
 
 ```bash
-cd ./build/openhwgroup.org_systems_core-v-mini-mcu_0/sim-modelsim/
+cd ./build/openhwgroup.org_systems_core-v-mini-mcu_<version>/sim-modelsim/
 ```
 
 and type to run your compiled software:
@@ -125,7 +123,7 @@ make questasim-build-opt
 then go to
 
 ```bash
-cd ./build/openhwgroup.org_systems_core-v-mini-mcu_0/sim-modelsim/
+cd ./build/openhwgroup.org_systems_core-v-mini-mcu_<version>/sim-modelsim/
 ```
 
 and
@@ -143,7 +141,7 @@ make questasim-build-opt-upf FUSESOC_PARAM="--USE_UPF"
 then, go to your target system built folder
 
 ```bash
-cd ./build/openhwgroup.org_systems_core-v-mini-mcu_0/sim-modelsim/
+cd ./build/openhwgroup.org_systems_core-v-mini-mcu_<version>/sim-modelsim/
 ```
 
 and then execute software as:
@@ -165,7 +163,7 @@ make xcelium-build
 then, go to your target system built folder
 
 ```bash
-cd ./build/openhwgroup.org_systems_core-v-mini-mcu_0/sim-xcelium/
+cd ./build/openhwgroup.org_systems_core-v-mini-mcu_<version>/sim-xcelium/
 ```
 
 and type to run your compiled software:

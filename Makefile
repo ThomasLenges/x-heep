@@ -34,7 +34,13 @@ RV_PROFILE  := $(shell which rv_profile)
 AREA_PLOT   := $(shell which area-plot)
 endif
 
-# Project options are based on the app to be build (default - hello_world)
+# Build directories
+BUILD_DIR         = build
+FUSESOC_BUILD_DIR = $(shell find $(BUILD_DIR) -maxdepth 1 -type d -name 'openhwgroup.org_systems_core-v-mini-mcu_*' 2>/dev/null | sort -V | head -n 1)
+VERILATOR_DIR     = $(FUSESOC_BUILD_DIR)/sim-verilator
+QUESTASIM_DIR     = $(FUSESOC_BUILD_DIR)/sim-modelsim
+
+# Project options are based on the app to be built (default - hello_world)
 PROJECT  ?= hello_world
 
 # Folder where the linker scripts are located
@@ -50,16 +56,18 @@ X_HEEP_CFG  ?= configs/general.hjson
 PADS_CFG ?= configs/pad_cfg.hjson
 PYTHON_X_HEEP_CFG ?=
 # Cached mcu-gen xheep configuration
-XHEEP_CONFIG_CACHE ?= build/xheep_config_cache.pickle
+XHEEP_CONFIG_CACHE ?= $(BUILD_DIR)/xheep_config_cache.pickle
 
 # Compiler options are 'gcc' (default) and 'clang'
 COMPILER 		?= gcc
-# Compiler prefix options are 'riscv32-unknown-' (default) and 'riscv32-corev-'
-COMPILER_PREFIX ?= riscv32-unknown-
+# Compiler prefix options are 'riscv32-corev-' (default) and 'riscv32-unknown-'
+COMPILER_PREFIX ?= riscv32-corev-
 # Compiler flags to be passed (for both linking and compiling)
 COMPILER_FLAGS 	?=
 # Arch options are any RISC-V ISA string supported by the CPU. Default 'rv32imc_zicsr'
 ARCH     		?= rv32imc_zicsr
+# Tell clang to use the gcc link instead of the llvm linker (useful for old clang). Default '0' (set it to 1)
+CLANG_LINKER_USE_LD ?= 0
 
 # Path relative from the location of sw/Makefile from which to fetch source files. The directory of that file is the default value.
 SOURCE 	 ?= $(".")
@@ -94,8 +102,8 @@ else
 endif
 
 # Area plot default configuration
-AREA_PLOT_RPT 		?= $(word 1, $(shell [ -d build ] && find build -type f -name "*area*.rpt" 2>/dev/null)) # path to the area report file
-AREA_PLOT_OUTDIR 	?= build/area-plot/ # output directory for the area plot
+AREA_PLOT_RPT 		?= $(word 1, $(shell [ -d $(BUILD_DIR) ] && find $(BUILD_DIR) -type f -name "*area*.rpt" 2>/dev/null)) # path to the area report file
+AREA_PLOT_OUTDIR 	?= $(BUILD_DIR)/area-plot/ # output directory for the area plot
 AREA_PLOT_TOP 		?=# top level module to consider for the area plot (automatically infer)
 
 # Export variables to sub-makefiles
@@ -161,7 +169,7 @@ mcu-gen-help:
 	$(PYTHON) util/mcu_gen.py -h
 
 ## Runs verible formating
-verible:
+verible: | .check-verible
 	util/format-verible;
 
 ## Runs black formating for python xheep generator files
@@ -171,25 +179,26 @@ format-python:
 	$(PYTHON) -m black util/mcu_gen.py
 	$(PYTHON) -m black util/waiver-gen.py
 	$(PYTHON) -m black util/c_gen.py
-	$(PYTHON) -m black test/test_x_heep_gen/test_peripherals.py
+	$(PYTHON) -m black test/test_x_heep_gen
 
 ## @section APP FW Build
 
 ## Generates the build folder in sw using CMake to build (compile and linking)
 ## @param PROJECT=<folder_name_of_the_project_to_be_built>
-## @param TARGET=sim(default),systemc,pynq-z2,nexys-a7-100t,zcu104
+## @param TARGET=sim(default),systemc,pynq-z2,nexys-a7-100t,zcu104,zcu102
 ## @param LINKER=on_chip(default),flash_load,flash_exec
 ## @param COMPILER=gcc(default),clang
-## @param COMPILER_PREFIX=riscv32-unknown-(default)
+## @param COMPILER_PREFIX=riscv32-corev-(default),riscv32-unknown-
 ## @param ARCH=rv32imc(default),<any_RISC-V_ISA_string_supported_by_the_CPU>
 app: clean-app
-	@$(MAKE) -C sw PROJECT=$(PROJECT) TARGET=$(TARGET) LINKER=$(LINKER) LINK_FOLDER=$(LINK_FOLDER) COMPILER=$(COMPILER) COMPILER_PREFIX=$(COMPILER_PREFIX) COMPILER_FLAGS=$(COMPILER_FLAGS) ARCH=$(ARCH) SOURCE=$(SOURCE) \
+	@$(MAKE) -C sw PROJECT=$(PROJECT) TARGET=$(TARGET) LINKER=$(LINKER) LINK_FOLDER=$(LINK_FOLDER) COMPILER=$(COMPILER) COMPILER_PREFIX=$(COMPILER_PREFIX) COMPILER_FLAGS=$(COMPILER_FLAGS) ARCH=$(ARCH) SOURCE=$(SOURCE) CLANG_LINKER_USE_LD=$(CLANG_LINKER_USE_LD) \
 	|| { \
 	echo "\033[0;31mHmmm... seems like the compilation failed...\033[0m"; \
 	echo "\033[0;31mIf you do not understand why, it is likely that you either:\033[0m"; \
 	echo "\033[0;31m  a) offended the Leprechaun of Electronics\033[0m"; \
 	echo "\033[0;31m  b) forgot to run make mcu-gen\033[0m"; \
-	echo "\033[0;31mI would start by checking b) if I were you!\033[0m"; \
+	echo "\033[0;31m  c) forgot to set the correct compiler parameters (check the docs!)\033[0m"; \
+	echo "\033[0;31mI would start by checking b) or c) if I were you!\033[0m"; \
 	exit 1; \
 	}
 	@python scripts/building/mem_usage.py
@@ -202,11 +211,11 @@ app-list:
 ## @section Simulation
 
 ## Verilator simulation with C++
-verilator-build:
+verilator-build: | .check-verilator
 	$(FUSESOC) --cores-root . run --no-export --target=sim --tool=verilator $(FUSESOC_FLAGS) --build openhwgroup.org:systems:core-v-mini-mcu $(FUSESOC_PARAM) 2>&1 | tee buildsim.log
 
 ## Verilator simulation with SystemC
-verilator-build-sc:
+verilator-build-sc: | .check-verilator
 	$(FUSESOC) --cores-root . run --no-export --target=sim_sc --tool=verilator $(FUSESOC_FLAGS) --build openhwgroup.org:systems:core-v-mini-mcu $(FUSESOC_PARAM) 2>&1 | tee buildsim.log
 
 ## Questasim simulation
@@ -215,12 +224,12 @@ questasim-build:
 
 ## Questasim simulation with HDL optimized compilation
 questasim-build-opt: questasim-build
-	$(MAKE) -C $(shell find build -type d -name sim-modelsim | head -n 1) opt
+	$(MAKE) -C $(QUESTASIM_DIR) opt
 
 ## Questasim simulation with HDL optimized compilation and UPF power domain description
 ## @param FUSESOC_PARAM="--USE_UPF"
 questasim-build-opt-upf: questasim-build
-	$(MAKE) -C $(shell find build -type d -name sim-modelsim | head -n 1) opt-upf
+	$(MAKE) -C $(QUESTASIM_DIR) opt-upf
 
 ## VCS simulation
 ## @param CPU=cv32e20(default),cv32e40p,cv32e40x,cv32e40px
@@ -262,12 +271,12 @@ verilator-run-sc:
 
 ## Opens gtkwave to view the waveform generated by the last verilator simulation
 verilator-waves: .check-gtkwave
-	gtkwave ./build/openhwgroup.org_systems_core-v-mini-mcu_1.0.1/sim-verilator/waveform.fst
+	gtkwave $(VERILATOR_DIR)/waveform.fst
 
 ## @section Vivado
 
 ## Builds (synthesis and implementation) the bitstream for the FPGA version using Vivado
-## @param FPGA_BOARD=nexys-a7-100t,pynq-z2,zcu104
+## @param FPGA_BOARD=nexys-a7-100t,pynq-z2,zcu104,zcu102
 ## @param FUSESOC_FLAGS=--flag=<flagname>
 vivado-fpga:
 	$(FUSESOC) --cores-root . run --no-export --target=$(FPGA_BOARD) $(FUSESOC_FLAGS) --build openhwgroup.org:systems:core-v-mini-mcu $(FUSESOC_PARAM) 2>&1 | tee buildvivado.log
@@ -276,7 +285,7 @@ vivado-fpga-nobuild:
 	$(FUSESOC) --cores-root . run --no-export --target=$(FPGA_BOARD) $(FUSESOC_FLAGS) --setup openhwgroup.org:systems:core-v-mini-mcu $(FUSESOC_PARAM) 2>&1 | tee buildvivado.log
 
 ## Loads the generated bitstream into the FPGA
-## @param FPGA_BOARD=nexys-a7-100t,pynq-z2,zcu104
+## @param FPGA_BOARD=nexys-a7-100t,pynq-z2,zcu104,zcu102
 vivado-fpga-pgm:
 	$(FUSESOC) --cores-root . run --no-export --target=$(FPGA_BOARD) $(FUSESOC_FLAGS) --run openhwgroup.org:systems:core-v-mini-mcu $(FUSESOC_PARAM) 2>&1 | tee programfpga.log
 
@@ -315,7 +324,7 @@ flash-erase:
 
 ## Run openOCD w/ EPFL_Programmer
 openOCD_epflp:
-	xterm -e openocd -f ./tb/core-v-mini-mcu-pynq-z2-esl-programmer.cfg;
+	xterm -e openocd -f ./tb/core-v-mini-mcu-esl-programmer.cfg;
 
 ## Run openOCD w/ BSCAN of the Pynq-Z2 board
 openOCD_bscan:
@@ -336,6 +345,12 @@ test:
 	@echo "You can also find the output in test/test_apps/test_apps.log"
 	python3 test/test_x_heep_gen/test_peripherals.py
 	@echo "You can also find the peripheral test outputs in test/test_x_heep_gen/outputs"
+
+.PHONY: test_kwargs
+test_kwargs:
+	$(MAKE) mcu-gen X_HEEP_CFG=configs/ci.hjson PADS_CFG=test/test_x_heep_gen/pads/pad_cfg.hjson
+	$(PYTHON) util/mcu_gen.py --cached_path $(XHEEP_CONFIG_CACHE) --cached --outtpl test/test_x_heep_gen/pads/output/kwargs_output.json.tpl
+	python3 test/test_x_heep_gen/pad_test.py
 
 
 ## Builds the specified app, loads it into the programmer's flash and then opens picocom to see the output
@@ -374,16 +389,22 @@ clean-app:
 ## Remove the build folders
 .PHONY: clean
 clean: clean-app
-	@rm -rf build
+	@rm -rf $(BUILD_DIR)
 
 ## Leave the repository in a clean state, removing all generated files. For now, it just calls clean.
 .PHONY: clean-all
 clean-all: clean
 
 ## @section Utilities
-## Check if GTKWave is available
-.PHONY: .check-gtkwave
-.check-gtkwave:
-	@if [ ! `which gtkwave` ]; then \
-	printf -- "### ERROR: 'gtkwave' is not in PATH. Is the correct conda environment active?\n" >&2; \
-	exit 1; fi
+# Check if a program is available in PATH
+define CHECK_PROGRAM
+.PHONY: .check-$(1)
+.check-$(1):
+	@command -v $(2) >/dev/null 2>&1 || { \
+		printf "### ERROR: '%s' is not in PATH.\\n" "$(2)" >&2; \
+		exit 1; \
+	}
+endef
+$(eval $(call CHECK_PROGRAM,gtkwave,gtkwave))
+$(eval $(call CHECK_PROGRAM,verible,verible-verilog-format))
+$(eval $(call CHECK_PROGRAM,verilator,verilator))
