@@ -13,9 +13,9 @@
 // RAM buffer of size of a sector
 uint32_t ram_buffer[1025];
 
-#define LENGTH_BYTES 12 
+#define LENGTH_BYTES 16 
 #define LENGTH_WORDS ((LENGTH_BYTES + 3) / 4) // To deal with non-multiple of 4 bytes
-#define OFFSET_WORDS 1 // 1 for checking offset at start // 1023 for checking offset at end
+#define OFFSET_WORDS 1023 // 1 for checking offset at start // 1023 for checking offset at end
 
 // Flash buffer
 int32_t __attribute__((section(".xheep_data_flash_only"))) __attribute__ ((aligned (16))) flash_buffer[LENGTH_WORDS+OFFSET_WORDS]; 
@@ -85,7 +85,7 @@ uint32_t check_result(uint8_t *expected_data, uint32_t len) {
     uint8_t *ram_buffer_char = (uint8_t *)ram_buffer;
 
     for (uint32_t i = 0; i < len; i++) {
-        if (expected_data[i] != ram_buffer_char[i+OFFSET_WORDS]) {
+        if (expected_data[i] != ram_buffer_char[i]) {
             printf("Error at position %d: expected %x, got %x\n", i, expected_data[i], ram_buffer_char[i+OFFSET_WORDS]);
             errors++;
             break;
