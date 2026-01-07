@@ -8,6 +8,9 @@
  *
  * See "sw/application/example_w25q128jw_read/write" for software usage examples (with polling-mode).
  * or "sw/application/example_w25q128jw_read_interrupt" for interrupt-mode usage.
+ *
+ * Author: Thomas Lenges   <thomas.lenges@epfl.ch> 
+ *                         <thomas.lenges@hotmail.com>
  */
 module w25q128jw_controller #(
     parameter type reg_req_t = reg_pkg::reg_req_t,

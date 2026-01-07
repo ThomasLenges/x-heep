@@ -21,7 +21,7 @@ static volatile uint32_t w25q128jw_controller_done_flag = 0;
 __attribute__((optimize("O0"))) uint32_t w25q128jw_controller_is_ready_polling()
 {
     /* The transaction READY bit is read from the status register*/
-    uint32_t ret = ( w25q128jw_controller_peri->STATUS & (1<<W25Q128JW_CONTROLLER_STATUS_READY_BIT) ); // TO CHANGE FOR STATUS
+    uint32_t ret = ( w25q128jw_controller_peri->STATUS & (1<<W25Q128JW_CONTROLLER_STATUS_READY_BIT) ); 
     return ret;
 }
 
