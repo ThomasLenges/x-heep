@@ -104,7 +104,7 @@ FOREACH(file_path ${new_list})
 ENDFOREACH()
 
 LIST(REMOVE_DUPLICATES dir_list_str) 
-string(REPLACE ";" "" dir_list_str ${dir_list_str}) #This has been moved here to avoid multiple includes of the same path, see: https://github.com/esl-epfl/x-heep/issues/470
+string(REPLACE ";" "" dir_list_str ${dir_list_str}) #This has been moved here to avoid multiple includes of the same path, see: https://github.com/x-heep/x-heep/issues/470
 LIST(REMOVE_DUPLICATES h_dir_list_)
 
 
@@ -145,7 +145,7 @@ FOREACH(file_path IN LISTS new_list)
     endif()
   elseif( (${file_path} MATCHES "${SOURCE_PATH}external/") AND ( NOT  ${file_path} MATCHES "exclude" ) )
     SET(add 1)
-  elseif( ${file_path} MATCHES "${SOURCE_PATH}applications/${PROJECT}/.*${MAINFILE}\." ) # look for main.*
+  elseif( ${file_path} MATCHES "${SOURCE_PATH}applications/${PROJECT}/${MAINFILE}\\." ) # look for main.*
     SET(app_found 1)
   elseif( ${file_path} MATCHES "${SOURCE_PATH}applications/${PROJECT}/" ) # other sources
     SET(add 1)
@@ -182,7 +182,7 @@ if( app_found EQUAL 0 )
       if(NOT ${file_path} MATCHES ".*/crt/.*")
         SET(add 1)
       endif()
-    elseif( ( ${file_path} MATCHES "${ROOT_PROJECT}applications/${PROJECT}/" ) AND ( NOT ${file_path} MATCHES "${ROOT_PROJECT}applications/${PROJECT}/.*${MAINFILE}\." ) AND ( NOT  ${file_path} MATCHES "exclude" ) )
+    elseif( ( ${file_path} MATCHES "${ROOT_PROJECT}applications/${PROJECT}/" ) AND ( NOT ${file_path} MATCHES "${ROOT_PROJECT}applications/${PROJECT}/${MAINFILE}\\." ) AND ( NOT  ${file_path} MATCHES "exclude" ) )
       SET(add 1)
     endif()
 
@@ -432,8 +432,10 @@ message( "${Magenta}Linker file: ${LINKER_SCRIPT}${ColourReset}")
 # Setting-up the properties, elf is
 set_target_properties(${MAINFILE}.elf PROPERTIES LINK_DEPENDS "${LINKER_SCRIPT}")
 
+message(STATUS "${Magenta}CLANG_LINKER_USE_LD = '${CLANG_LINKER_USE_LD}'")
+
 # Linker control (support both GCC and Clang)
-if (${COMPILER} MATCHES "clang")
+if (${COMPILER} MATCHES "clang" AND NOT CLANG_LINKER_USE_LD)
   # Linker flags for Clang
   message(STATUS "${Magenta}Using Clang/lld specific linker flags${ColourReset}")
   SET(CMAKE_EXE_LINKER_FLAGS  "-T ${LINKER_SCRIPT}  \
@@ -554,6 +556,11 @@ endif()
 #add_custom_target(gdb DEPENDS ${MAINFILE}.elf)
 #add_custom_command(TARGET gdb
 #    COMMAND ${CMAKE_C_GDB} ${MAINFILE}.elf -x gdbInit &)
+
+# Post-processing to have access to linker script in build folder
+add_custom_command(TARGET ${MAINFILE}.elf POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${LINKER_SCRIPT} ${MAINFILE}.ld
+        COMMENT "Invoking: Linker script copy")
 
 SET(DCMAKE_EXPORT_COMPILE_COMMANDS ON)
 

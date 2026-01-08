@@ -4,7 +4,7 @@ CAPI=2:
 # Solderpad Hardware License, Version 2.1, see LICENSE.md for details.
 # SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
 
-name: openhwgroup.org:systems:core-v-mini-mcu:1.0.1
+name: openhwgroup.org:systems:core-v-mini-mcu:1.0.4
 description: CORE-V MINI-MCU Top.
 
 filesets:
@@ -41,6 +41,7 @@ filesets:
     files:
     - hw/core-v-mini-mcu/core_v_mini_mcu.sv
     - hw/core-v-mini-mcu/cpu_subsystem.sv
+    - hw/core-v-mini-mcu/cve2_xif_wrapper.sv
     - hw/core-v-mini-mcu/memory_subsystem.sv
     - hw/core-v-mini-mcu/xbar_varlat_one_to_n.sv
     - hw/core-v-mini-mcu/xbar_varlat_n_to_one.sv
@@ -191,13 +192,25 @@ parameters:
     datatype: int
     paramtype: vlogparam
     description: |
-      Enables COREV_PULP custom RISC-V extension on the CV32E40P core. Admitted values: 1|0.
+      Enables COREV_PULP custom RISC-V extensions. Admitted values: 1|0.
     default: 0
   FPU:
     datatype: int
     paramtype: vlogparam
     description: |
-      Enables RV32F RISC-V extension on the CV32E40P core. Admitted values: 1|0.
+      Enables RV32F RISC-V extensions. Admitted values: 1|0.
+    default: 0
+  ZFINX:
+    datatype: int
+    paramtype: vlogparam
+    description: |
+      Enables RV32Zfinx RISC-V extensions. Admitted values: 1|0.
+    default: 0
+  QUADRILATERO:
+    datatype: int
+    paramtype: vlogparam
+    description: |
+      Enables Matrix custom RISC-V extensions. Admitted values: 1|0.
     default: 0
   JTAG_DPI:
     datatype: int
@@ -248,6 +261,10 @@ parameters:
     paramtype: vlogdefine
     default: false
   FPGA_ZCU104:
+    datatype: bool
+    paramtype: vlogdefine
+    default: false
+  FPGA_ZCU102:
     datatype: bool
     paramtype: vlogdefine
     default: false
@@ -335,6 +352,8 @@ targets:
     parameters:
     - COREV_PULP
     - FPU
+    - ZFINX
+    - QUADRILATERO
     - JTAG_DPI
     - X_EXT
     - USE_EXTERNAL_DEVICE_EXAMPLE
@@ -404,6 +423,7 @@ targets:
     parameters:
     - COREV_PULP
     - FPU
+    - ZFINX
     - JTAG_DPI
     - X_EXT
     - USE_EXTERNAL_DEVICE_EXAMPLE
@@ -442,6 +462,7 @@ targets:
     parameters:
     - COREV_PULP
     - FPU
+    - ZFINX
     - X_EXT
     - SYNTHESIS=true
     - REMOVE_OBI_FIFO
@@ -464,6 +485,7 @@ targets:
     parameters:
     - COREV_PULP
     - FPU
+    - ZFINX
     - X_EXT
     - SYNTHESIS=true
     - REMOVE_OBI_FIFO
@@ -485,6 +507,7 @@ targets:
     parameters:
     - COREV_PULP
     - FPU
+    - ZFINX
     - X_EXT
     - SYNTHESIS=true
     - REMOVE_OBI_FIFO
@@ -497,6 +520,28 @@ targets:
         board_repo_paths: [../../../hw/fpga/board_files/vendor/esl_epfl_zcu104_board_files]
     toplevel: [xilinx_core_v_mini_mcu_wrapper]
     
+  zcu102:
+    <<: *default_target
+    default_tool: vivado
+    description: ZCU102 Evaluation Board
+    filesets_append:
+    - x_heep_system
+    - rtl-fpga
+    parameters:
+    - COREV_PULP
+    - FPU
+    - X_EXT
+    - SYNTHESIS=true
+    - REMOVE_OBI_FIFO
+    - FPGA_SYNTHESIS=true
+    - FPGA_ZCU102=true
+    tools:
+      vivado:
+        part: xczu9eg-ffvb1156-2-e
+        board_part: xilinx.com:zcu102:part0:3.3
+        board_repo_paths: [../../../hw/fpga/board_files/vendor/zcu102]
+    toplevel: [xilinx_core_v_mini_mcu_wrapper]
+
   asic_synthesis:
     <<: *default_target
     default_tool: design_compiler
@@ -506,6 +551,7 @@ targets:
     - COREV_PULP
     - X_EXT
     - FPU
+    - ZFINX
     - SYNTHESIS=true
     - REMOVE_OBI_FIFO
     filesets_append:
@@ -527,6 +573,7 @@ targets:
     parameters:
       - COREV_PULP
       - FPU
+      - ZFINX
       - X_EXT
       - SYNTHESIS=true
       - VERILATOR=true

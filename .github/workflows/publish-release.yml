@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: esl-epfl/x-heep/x-heep-toolchain
+  IMAGE_NAME: x-heep/x-heep/x-heep-toolchain
 
 jobs:
   publish-release:
@@ -30,6 +30,15 @@ jobs:
           TAG_NAME="${BRANCH_NAME#release/}"
           echo "tag=${TAG_NAME}" >> $GITHUB_OUTPUT
 
+      - name: Update Tag
+        env:
+          TAG: ${{ steps.get_tag.outputs.tag }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f ${TAG} HEAD
+          git push origin -f ${TAG}
+
       - name: Publish Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -37,7 +46,7 @@ jobs:
           TAG: ${{ steps.get_tag.outputs.tag }}
         run: |
           echo "Publishing release for tag: $TAG"
-          gh release edit $TAG --draft=false
+          gh release edit $TAG --draft=false --target ${{ github.sha }}
 
       - name: Delete Source Branch
         run: |
